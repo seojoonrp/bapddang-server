@@ -27,17 +27,17 @@ type SignUpInput struct {
 	UserName string `json:"userName" binding:"required"`
 }
 
-func SignUp (c *gin.Context) {
+func SignUp (ctx *gin.Context) {
 	var input SignUpInput
 
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
 		return
 	}
 
@@ -52,11 +52,11 @@ func SignUp (c *gin.Context) {
 	_, err = userCollection.InsertOne(context.TODO(), newUser)
 	if err != nil {
 		log.Printf("Error while creating new user: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create new user"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create new user"})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "User created successfully"})
+	ctx.JSON(http.StatusCreated, gin.H{"message": "User created successfully"})
 }
 
 type LoginInput struct {
@@ -64,23 +64,23 @@ type LoginInput struct {
 	Password string `json:"password" binding:"required"`
 }
 
-func Login (c *gin.Context) {
+func Login (ctx *gin.Context) {
 	var input LoginInput
 
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	}
 
 	var user models.User
 	err := userCollection.FindOne(context.TODO(), bson.M{"email": input.Email}).Decode(&user)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email"})
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email"})
 		return
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid password"})
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid password"})
 		return
 	}
 
@@ -91,9 +91,9 @@ func Login (c *gin.Context) {
 
 	tokenString, err := token.SignedString([]byte(os.Getenv("JWT_KEY")))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"token": tokenString})
+	ctx.JSON(http.StatusOK, gin.H{"token": tokenString})
 }

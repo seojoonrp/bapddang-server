@@ -32,6 +32,11 @@ func main() {
 	r.POST("/signup", handlers.SignUp)
 	r.POST("/login", handlers.Login)
 
+	// protected := r.Group("/api")
+	// protected.Use(middleware.AuthMiddleware(userCollection)) {
+		
+	// }
+
 	log.Println("Server started on port 8080.")
 	r.Run(":8080")
 }
