@@ -1,3 +1,7 @@
+// api/handlers/user_handler.go
+
+// 유저 로그인/회원가입을 처리하는 API 핸들러
+
 package handlers
 
 import (
@@ -83,7 +87,8 @@ func Login (ctx *gin.Context) {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid password"})
 		return
 	}
-
+	
+	// 로그인시 JWT토큰을 발급
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub": user.ID,
 		"exp": time.Now().Add(time.Hour * 24 * 7).Unix(),

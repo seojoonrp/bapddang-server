@@ -3,40 +3,43 @@ package main
 import (
 	"context"
 	"log"
-	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 	"github.com/seojoonrp/bapddang-server/api/handlers"
+	"github.com/seojoonrp/bapddang-server/config"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Fatal("Error loading .env")
-	}
+	config.LoadConfig()
 
-	mongoURI := os.Getenv("MONGODB_URI")
-	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(mongoURI))
+	ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+	defer cancel()
+
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(config.AppConfig.MongoURI))
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer client.Disconnect(context.TODO())
+	defer client.Disconnect(ctx)
 
-	userCollection := client.Database("bapddang-dev").Collection("users")
-	handlers.SetUserCollection(userCollection)
+	err = client.Ping(ctx, nil)
+	if err != nil {
+		log.Fatal("Failed to connect to MongoDB: ", err)
+	}
+
+	log.Println("Successfully connected to MongoDB.")
+
+	db := client.Database(config.AppConfig.DBName)
+	handlers.SetUserCollection(db.Collection("users"))
 
 	r := gin.Default()
 
 	r.POST("/signup", handlers.SignUp)
 	r.POST("/login", handlers.Login)
 
-	// protected := r.Group("/api")
-	// protected.Use(middleware.AuthMiddleware(userCollection)) {
-		
-	// }
-
-	log.Println("Server started on port 8080.")
-	r.Run(":8080")
+	port := config.AppConfig.Port
+	log.Println("Server started on port " + port + ".")
+	r.Run(":" + port)
 }
