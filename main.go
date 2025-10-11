@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/seojoonrp/bapddang-server/api/handlers"
+	"github.com/seojoonrp/bapddang-server/api/routes"
 	"github.com/seojoonrp/bapddang-server/config"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -34,12 +35,10 @@ func main() {
 	db := client.Database(config.AppConfig.DBName)
 	handlers.SetUserCollection(db.Collection("users"))
 
-	r := gin.Default()
-
-	r.POST("/signup", handlers.SignUp)
-	r.POST("/login", handlers.Login)
+	router := gin.Default()
+	routes.SetupRoutes(router, db)
 
 	port := config.AppConfig.Port
 	log.Println("Server started on port " + port + ".")
-	r.Run(":" + port)
+	router.Run(":" + port)
 }
