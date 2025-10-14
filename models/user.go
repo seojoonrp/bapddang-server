@@ -11,7 +11,7 @@ type User struct {
 	UserName string `bson:"userName"`
 	Email string `bson:"email"`
 	Password string `bson:"password"`
-	CreatedAt time.Time `bson:"createdAt"`
 	Day int `bsong:"day"`
 	LikedFoodIDs []primitive.ObjectID `bson:"likedFoodIDs"`
+	CreatedAt time.Time `bson:"createdAt"`
 }

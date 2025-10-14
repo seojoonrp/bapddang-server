@@ -8,8 +8,8 @@ type StandardFood struct {
 	ImageURL string `bson:"imageURL"`
 
 	Speed string `bson:"speed"`
-	Category string `bson:"category"`
-	Parents []string `bson:"parents"`
+	Type string `bson:"type"`
+	Categories []string `bson:"categories"`
 
 	LikeCount int `bson:"likeCount"`
 	ReviewCount int `bson:"reviewCount"`

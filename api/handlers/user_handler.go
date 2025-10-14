@@ -47,12 +47,12 @@ func SignUp (ctx *gin.Context) {
 	}
 
 	newUser := models.User {
+		UserName: input.UserName,
 		Email: input.Email,
 		Password: string(hashedPassword),
-		UserName: input.UserName,
-		CreatedAt: time.Now(),
 		Day: 1,
 		LikedFoodIDs: make([]primitive.ObjectID, 0),
+		CreatedAt: time.Now(),
 	}
 
 	_, err = userCollection.InsertOne(context.TODO(), newUser)
