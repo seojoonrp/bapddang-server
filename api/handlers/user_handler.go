@@ -1,6 +1,6 @@
 // api/handlers/user_handler.go
 
-// 유저 로그인/회원가입을 처리하는 API 핸들러
+// 유저 관련 로직(로그인, 회원가입, 데이터 fetching)을 처리하는 API 핸들러
 
 package handlers
 
@@ -8,13 +8,14 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
+	"github.com/seojoonrp/bapddang-server/config"
 	"github.com/seojoonrp/bapddang-server/models"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -51,6 +52,7 @@ func SignUp (ctx *gin.Context) {
 		UserName: input.UserName,
 		CreatedAt: time.Now(),
 		Day: 1,
+		LikedFoodIDs: make([]primitive.ObjectID, 0),
 	}
 
 	_, err = userCollection.InsertOne(context.TODO(), newUser)
@@ -94,11 +96,75 @@ func Login (ctx *gin.Context) {
 		"exp": time.Now().Add(time.Hour * 24 * 7).Unix(),
 	})
 
-	tokenString, err := token.SignedString([]byte(os.Getenv("JWT_KEY")))
+	tokenString, err := token.SignedString([]byte(config.AppConfig.JWTSecret))
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"token": tokenString})
+}
+
+func GetLikedFoodIDs(ctx *gin.Context) {
+	userCtx, exists := ctx.Get("currentUser")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
+		return
+	}
+
+	user := userCtx.(models.User)
+	ctx.JSON(http.StatusOK, user.LikedFoodIDs)
+}
+
+func LikeFood(ctx *gin.Context) {
+	userCtx, _ := ctx.Get("currentUser")
+	user := userCtx.(models.User)
+	userID := user.ID
+
+	foodIDStr := ctx.Param("foodId")
+	foodID, err := primitive.ObjectIDFromHex(foodIDStr)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid food ID"})
+		return
+	}
+
+	filter := bson.M{"_id": userID}
+	update := bson.M{"$addToSet": bson.M{"likedFoodIDs": foodID}}
+
+	result, err := userCollection.UpdateOne(context.TODO(), filter, update)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user likes"})
+		return
+	}
+
+	if result.ModifiedCount == 0 {
+		ctx.JSON(http.StatusOK, gin.H{"message": "Food was already liked"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "Successfully liked the food"})
+}
+
+func UnlikeFood(ctx *gin.Context) {
+	userCtx, _ := ctx.Get("currentUser")
+	user := userCtx.(models.User)
+	userID := user.ID
+
+	foodIDStr := ctx.Param("foodId")
+	foodID, err := primitive.ObjectIDFromHex(foodIDStr)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid food ID format"})
+		return
+	}
+
+	filter := bson.M{"_id": userID}
+	update := bson.M{"$pull": bson.M{"likedFoodIDs": foodID}}
+
+	_, err = userCollection.UpdateOne(context.TODO(), filter, update)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user likes"})
+		return
+	}
+	
+	ctx.JSON(http.StatusOK, gin.H{"message": "Successfully unliked the food"})
 }

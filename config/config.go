@@ -1,3 +1,7 @@
+// config/config.go
+
+// env 데이터 연결 및 설정을 관리
+
 package config
 
 import (

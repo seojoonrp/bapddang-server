@@ -2,7 +2,7 @@ package models
 
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
-type Food struct {
+type StandardFood struct {
 	ID primitive.ObjectID `bson:"_id,omitempty"`
 	Name string `bson:"name"`
 	ImageURL string `bson:"imageURL"`

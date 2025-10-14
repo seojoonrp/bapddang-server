@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/seojoonrp/bapddang-server/api/handlers"
 	"github.com/seojoonrp/bapddang-server/api/routes"
 	"github.com/seojoonrp/bapddang-server/config"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -33,7 +32,6 @@ func main() {
 	log.Println("Successfully connected to MongoDB.")
 
 	db := client.Database(config.AppConfig.DBName)
-	handlers.SetUserCollection(db.Collection("users"))
 
 	router := gin.Default()
 	routes.SetupRoutes(router, db)

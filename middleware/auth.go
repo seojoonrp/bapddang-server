@@ -3,12 +3,13 @@ package middleware
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
+	"github.com/seojoonrp/bapddang-server/config"
 	"github.com/seojoonrp/bapddang-server/models"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -33,10 +34,11 @@ func AuthMiddleware(userCollection *mongo.Collection) gin.HandlerFunc {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
-			return []byte(os.Getenv("JWT_KEY")), nil
+			return []byte(config.AppConfig.JWTSecret), nil
 		})
 
 		if err != nil || !token.Valid {
+			log.Printf("Token parsing error: %v", err) 
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			return
 		}
