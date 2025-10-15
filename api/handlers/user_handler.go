@@ -47,6 +47,7 @@ func SignUp (ctx *gin.Context) {
 	}
 
 	newUser := models.User {
+		ID: primitive.NewObjectID(),
 		UserName: input.UserName,
 		Email: input.Email,
 		Password: string(hashedPassword),
@@ -62,7 +63,7 @@ func SignUp (ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, gin.H{"message": "User created successfully"})
+	ctx.JSON(http.StatusCreated, newUser)
 }
 
 type LoginInput struct {

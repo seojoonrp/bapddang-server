@@ -18,6 +18,12 @@ func SetupRoutes(router *gin.Engine, db *mongo.Database) {
 	standardFoodCollection := db.Collection("standard-foods")
 	handlers.SetStandardFoodCollection(standardFoodCollection)
 
+	customFoodCollection := db.Collection("custom-foods")
+	handlers.SetCustomFoodCollection(customFoodCollection)
+
+	reviewCollection := db.Collection("reviews")
+	handlers.SetReviewCollection(reviewCollection)
+
 	apiV1 := router.Group("/api/v1")
 	{
 		authRoutes := apiV1.Group("/auth")
@@ -32,6 +38,8 @@ func SetupRoutes(router *gin.Engine, db *mongo.Database) {
 			protected.GET("/users/me/liked-foods", handlers.GetLikedFoodIDs)
 			protected.POST("/foods/:foodId/like", handlers.LikeFood)
 			protected.DELETE("/foods/:foodId/like", handlers.UnlikeFood)
+			protected.POST("/custom-foods", handlers.FindOrCreateCustomFood)
+			protected.POST("/reviews", handlers.CreateReview)
 		}
 
 		apiV1.GET("/foods/:foodId", handlers.GetFoodByID)
