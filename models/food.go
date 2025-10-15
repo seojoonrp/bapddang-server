@@ -1,3 +1,5 @@
+// models/food.go
+
 package models
 
 import (

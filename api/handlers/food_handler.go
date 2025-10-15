@@ -1,3 +1,7 @@
+// api/handlers/food_handler.go
+
+// 음식 관련 로직(음식 조회, 커스텀 음식 생성 등)을 처리하는 API 핸들러
+
 package handlers
 
 import (
