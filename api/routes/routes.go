@@ -34,6 +34,8 @@ func SetupRoutes(router *gin.Engine, db *mongo.Database) {
 			protected.DELETE("/foods/:foodId/like", handlers.UnlikeFood)
 		}
 
+		apiV1.GET("/foods/:foodId", handlers.GetFoodByID)
+
 		adminRoutes := apiV1.Group("/admin")
 		{
 			adminRoutes.POST("/new-food", handlers.CreateStandardFood)
