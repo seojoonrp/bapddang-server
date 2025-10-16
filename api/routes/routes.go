@@ -1,7 +1,5 @@
 // routes/routes.go
 
-// api 엔드포인트를 관리하는 라우터
-
 package routes
 
 import (
@@ -20,10 +18,10 @@ func SetupRoutes(router *gin.Engine, db *mongo.Database) {
 	userHandler := handlers.NewUserHandler(userService)
 
 	standardFoodCollection := db.Collection("standard-foods")
-	handlers.SetStandardFoodCollection(standardFoodCollection)
-
 	customFoodCollection := db.Collection("custom-foods")
-	handlers.SetCustomFoodCollection(customFoodCollection)
+	foodRepository := repositories.NewFoodRepository(standardFoodCollection, customFoodCollection)
+	foodService := services.NewFoodService(foodRepository)
+	foodHandler := handlers.NewFoodHandler(foodService)
 
 	reviewCollection := db.Collection("reviews")
 	handlers.SetReviewCollection(reviewCollection)
@@ -41,15 +39,15 @@ func SetupRoutes(router *gin.Engine, db *mongo.Database) {
 		{
 			protected.POST("/foods/:foodId/like", userHandler.LikeFood)
 			protected.DELETE("/foods/:foodId/like", userHandler.UnlikeFood)
-			protected.POST("/custom-foods", handlers.FindOrCreateCustomFood)
+			protected.POST("/custom-foods", foodHandler.FindOrCreateCustomFood)
 			protected.POST("/reviews", handlers.CreateReview)
 		}
 
-		apiV1.GET("/foods/:foodId", handlers.GetFoodByID)
+		apiV1.GET("/foods/:foodId", foodHandler.GetStandardFoodByID)
 
 		adminRoutes := apiV1.Group("/admin")
 		{
-			adminRoutes.POST("/new-food", handlers.CreateStandardFood)
+			adminRoutes.POST("/new-food", foodHandler.CreateStandardFood)
 		}
 	}
 }

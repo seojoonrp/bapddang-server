@@ -24,9 +24,21 @@ type StandardFood struct {
 	TrendScore int `bson:"trendScore" json:"trendScore"`
 }
 
+type NewStandardFoodInput struct {
+	Name string `json:"name"`
+	ImageURL string `json:"imageURL"`
+	Speed string `json:"speed"`
+	Type string `json:"type"`
+	Categories []string `json:"categories"`
+}
+
 type CustomFood struct {
 	ID primitive.ObjectID `bson:"_id, omitempty" json:"id"`
 	Name string `bson:"name" json:"name" binding:"required"`
 	UsingUserIDs []primitive.ObjectID `bson:"usingUserIDs" json:"usingUserIDs" binding:"required"`
 	CreatedAt time.Time `bson:"createdAt" json:"createdAt"`
+}
+
+type NewCustomFoodInput struct {
+	Name string `json:"name"`
 }

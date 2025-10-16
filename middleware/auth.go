@@ -1,5 +1,4 @@
 // middleware/auth.go
-
 // JWT 인증 미들웨어
 
 package middleware
