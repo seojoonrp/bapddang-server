@@ -28,3 +28,14 @@ type Review struct {
 	CreatedAt time.Time `bson:"createdAt" json:"createdAt"`
 	UpdatedAt time.Time `bson:"updatedAt" json:"updatedAt"`
 }
+
+type CreateReviewInput struct {
+	Name string `json:"name" binding:"required"`
+	Foods []ReviewedFoodItem `json:"foods" binding:"required"`
+	Speed string `json:"speed" binding:"required"`
+	MealTime string `json:"mealTime" binding:"required"`
+	Tags []string `json:"tags"`
+	ImageURL string `json:"imageUrl"`
+	Comment string `json:"comment"`
+	Rating int `json:"rating" binding:"required"`
+}

@@ -24,7 +24,9 @@ func SetupRoutes(router *gin.Engine, db *mongo.Database) {
 	foodHandler := handlers.NewFoodHandler(foodService)
 
 	reviewCollection := db.Collection("reviews")
-	handlers.SetReviewCollection(reviewCollection)
+	reviewRepository := repositories.NewReviewRepository(reviewCollection)
+	reviewService := services.NewReviewService(reviewRepository)
+	reviewHandler := handlers.NewReviewHandler(reviewService)
 
 	apiV1 := router.Group("/api/v1")
 	{
@@ -40,7 +42,7 @@ func SetupRoutes(router *gin.Engine, db *mongo.Database) {
 			protected.POST("/foods/:foodId/like", userHandler.LikeFood)
 			protected.DELETE("/foods/:foodId/like", userHandler.UnlikeFood)
 			protected.POST("/custom-foods", foodHandler.FindOrCreateCustomFood)
-			protected.POST("/reviews", handlers.CreateReview)
+			protected.POST("/reviews", reviewHandler.CreateReview)
 		}
 
 		apiV1.GET("/foods/:foodId", foodHandler.GetStandardFoodByID)

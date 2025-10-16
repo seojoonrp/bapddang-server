@@ -57,17 +57,14 @@ func (h *FoodHandler) CreateStandardFood(ctx *gin.Context) {
 func (h *FoodHandler) FindOrCreateCustomFood(ctx *gin.Context) {
 	var input models.NewCustomFoodInput
 	if err := ctx.ShouldBindJSON(&input); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	user, exists := ctx.Get("user")
-	if !exists {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
-	}
+	userCtx, _ := ctx.Get("currentUser")
+	user := userCtx.(models.User)
 
-	customFood, err := h.foodService.FindOrCreateCustomFood(input, user.(models.User))
+	customFood, err := h.foodService.FindOrCreateCustomFood(input, user)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find or create custom food"})
 		return
