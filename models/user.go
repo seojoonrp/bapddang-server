@@ -17,3 +17,14 @@ type User struct {
 	LikedFoodIDs []primitive.ObjectID `bson:"likedFoodIDs" json:"likedFoodIDs"`
 	CreatedAt time.Time `bson:"createdAt" json:"createdAt"`
 }
+
+type SignUpInput struct {
+	Email string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required"`
+	UserName string `json:"userName" binding:"required"`
+}
+
+type LoginInput struct {
+	Email string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required"`
+}
