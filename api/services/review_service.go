@@ -12,6 +12,7 @@ import (
 
 type ReviewService interface {
 	CreateReview(input models.CreateReviewInput, user models.User) (*models.Review, error)
+	GetMyReviewsByDay(userID primitive.ObjectID, day int) ([]models.Review, error)
 }
 
 type reviewService struct {
@@ -45,4 +46,8 @@ func (s *reviewService) CreateReview(input models.CreateReviewInput, user models
 		return nil, err
 	}
 	return &newReview, err
+}
+
+func (s *reviewService) GetMyReviewsByDay(userID primitive.ObjectID, day int) ([]models.Review, error) {
+	return s.reviewRepo.FindByUserIDAndDay(userID, day)
 }

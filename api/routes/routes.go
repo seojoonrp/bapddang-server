@@ -43,6 +43,7 @@ func SetupRoutes(router *gin.Engine, db *mongo.Database) {
 			protected.DELETE("/foods/:foodId/like", userHandler.UnlikeFood)
 			protected.POST("/custom-foods", foodHandler.FindOrCreateCustomFood)
 			protected.POST("/reviews", reviewHandler.CreateReview)
+			protected.GET("/reviews/me", reviewHandler.GetMyReviewsByDay)
 		}
 
 		apiV1.GET("/foods/:foodId", foodHandler.GetStandardFoodByID)

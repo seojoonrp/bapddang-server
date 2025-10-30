@@ -6,6 +6,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/seojoonrp/bapddang-server/api/services"
@@ -39,4 +40,29 @@ func (h *ReviewHandler) CreateReview (ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusCreated, newReview)
+}
+
+func (h *ReviewHandler) GetMyReviewsByDay(ctx *gin.Context) {
+	userCtx, _ := ctx.Get("currentUser")
+	user := userCtx.(models.User)
+
+	dayStr := ctx.Query("day")
+	if dayStr == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Day query parameter is required"})
+		return
+	}
+
+	day, err := strconv.Atoi(dayStr)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid day query parameter"})
+		return
+	}
+
+	reviews, err := h.reviewService.GetMyReviewsByDay(user.ID, day)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to fetch reviews"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, reviews)
 }
