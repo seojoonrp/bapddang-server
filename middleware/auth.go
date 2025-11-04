@@ -9,11 +9,13 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
 	"github.com/seojoonrp/bapddang-server/config"
 	"github.com/seojoonrp/bapddang-server/models"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -63,6 +65,29 @@ func AuthMiddleware(userCollection *mongo.Collection) gin.HandlerFunc {
 			if err != nil {
 				ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
 				return
+			}
+
+			loc, err := time.LoadLocation("Asia/Seoul")
+			if err != nil {
+				ctx.Next()
+				return
+			}
+
+			nowKST := time.Now().In(loc)
+			createdAtKST := user.CreatedAt.In(loc)
+			endDate := time.Date(nowKST.Year(), nowKST.Month(), nowKST.Day(), 0, 0, 0, 0, loc)
+			startDate := time.Date(createdAtKST.Year(), createdAtKST.Month(), createdAtKST.Day(), 0, 0, 0, 0, loc)
+			daysPassed := int(endDate.Sub(startDate).Hours() / 24)
+			curDay := daysPassed + 1
+
+			if user.Day < curDay {
+				user.Day = curDay
+
+				go func() {
+					filter := bson.M{"_id": user.ID}
+					update := bson.M{"$set": bson.M{"day": user.Day}}
+					userCollection.UpdateOne(context.Background(), filter, update)
+				}()
 			}
 
 			ctx.Set("currentUser", user)
