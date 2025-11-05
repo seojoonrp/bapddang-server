@@ -14,10 +14,13 @@ import (
 type FoodRepository interface {
 	FindStandardFoodByID(id primitive.ObjectID) (*models.StandardFood, error)
 	FindStandardFoodByName(name string) (*models.StandardFood, error)
-	SaveStandardFood(food *models.StandardFood) error
 	FindCustomFoodByName(name string) (*models.CustomFood, error)
+
 	SaveCustomFood(food *models.CustomFood) error
+	SaveStandardFood(food *models.StandardFood) error
+	
 	AddUserToCustomFood(foodID, userID primitive.ObjectID) error
+	UpdateReviewStats(foodID []primitive.ObjectID, rating *int) error
 
 	SearchSimilarStandardFood(name string) (*models.StandardFood, error)
 	SearchSimilarCustomFood(name string) (*models.CustomFood, error)
@@ -53,11 +56,6 @@ func (r *foodRepository) FindStandardFoodByName(name string) (*models.StandardFo
 	return &food, nil
 }
 
-func (r *foodRepository) SaveStandardFood(food *models.StandardFood) error {
-	_, err := r.standardFoodCollection.InsertOne(context.TODO(), food)
-	return err
-}
-
 func (r *foodRepository) FindCustomFoodByName(name string) (*models.CustomFood, error) {
 	var food models.CustomFood
 	err := r.customFoodCollection.FindOne(context.TODO(), bson.M{"name": name}).Decode(&food)
@@ -65,6 +63,11 @@ func (r *foodRepository) FindCustomFoodByName(name string) (*models.CustomFood, 
 		return nil, err
 	}
 	return &food, nil
+}
+
+func (r *foodRepository) SaveStandardFood(food *models.StandardFood) error {
+	_, err := r.standardFoodCollection.InsertOne(context.TODO(), food)
+	return err
 }
 
 func (r *foodRepository) SaveCustomFood(food *models.CustomFood) error {
@@ -76,6 +79,24 @@ func (r *foodRepository) AddUserToCustomFood(foodID, userID primitive.ObjectID) 
 	filter := bson.M{"_id": foodID}
 	update := bson.M{"$addToSet": bson.M{"usingUserIDs": userID}}
 	_, err := r.customFoodCollection.UpdateOne(context.TODO(), filter, update)
+	return err
+}
+
+func (r *foodRepository) UpdateReviewStats(foodIDs []primitive.ObjectID, rating *int) error {
+	if len(foodIDs) == 0 {
+		return nil
+	}
+	
+	filter := bson.M{"_id": bson.M{"$in": foodIDs}}
+
+	incMap := bson.M{"reviewCount": 1}
+	if rating != nil {
+		incMap["ratedReviewCount"] = 1
+		incMap["totalRating"] = *rating
+	}
+
+	update := bson.M{"$inc": incMap}
+	_, err := r.standardFoodCollection.UpdateMany(context.TODO(), filter, update)
 	return err
 }
 

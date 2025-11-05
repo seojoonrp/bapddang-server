@@ -16,6 +16,7 @@ type FoodService interface {
 	CreateStandardFood(input models.NewStandardFoodInput) (*models.StandardFood, error)
 	FindOrCreateCustomFood(input models.NewCustomFoodInput, user models.User) (*models.CustomFood, error)
 	ValidateFoods(names []string) ([]models.ValidationResult, error)
+	UpdateReviewStats(foodIDs []primitive.ObjectID, rating *int) error
 }
 
 type foodService struct {
@@ -33,7 +34,16 @@ func (s *foodService) GetStandardFoodByID(id string) (*models.StandardFood, erro
 	if err != nil {
 		return nil, err
 	}
-	return s.foodRepo.FindStandardFoodByID(foodID)
+
+	food, _ := s.foodRepo.FindStandardFoodByID(foodID)
+
+	if food.RatedReviewCount > 0 {
+		food.AverageRating = float64(food.TotalRating) / float64(food.RatedReviewCount)
+	} else {
+		food.AverageRating = 0.0
+	}
+
+	return food, nil
 }
 
 func (s *foodService) CreateStandardFood(input models.NewStandardFoodInput) (*models.StandardFood, error) {
@@ -46,7 +56,8 @@ func (s *foodService) CreateStandardFood(input models.NewStandardFoodInput) (*mo
 		Categories: input.Categories,
 		LikeCount: 0,
 		ReviewCount: 0,
-		AverageRating: 0.0,
+		RatedReviewCount: 0,
+		TotalRating: 0,
 		TrendScore: 0,
 	}
 	err := s.foodRepo.SaveStandardFood(newFood)
@@ -128,4 +139,8 @@ func (s *foodService) ValidateFoods(names []string) ([]models.ValidationResult, 
 	}
 
 	return results, nil
+}
+
+func (s *foodService) UpdateReviewStats(foodIDs []primitive.ObjectID, rating *int) error {
+	return s.foodRepo.UpdateReviewStats(foodIDs, rating)
 }

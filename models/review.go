@@ -25,7 +25,7 @@ type Review struct {
 	Tags []string `bson:"tags,omitempty" json:"tags"`
 	ImageURL string `bson:"imageUrl,omitempty" json:"imageUrl"`
 	Comment string `bson:"comment,omitempty" json:"comment"`
-	Rating int `bson:"rating" json:"rating"`
+	Rating int `bson:"rating,omitempty" json:"rating"`
 
 	Day int `bson:"day" json:"day" binding:"required"`
 	CreatedAt time.Time `bson:"createdAt" json:"createdAt"`
@@ -40,5 +40,5 @@ type CreateReviewInput struct {
 	Tags []string `json:"tags"`
 	ImageURL string `json:"imageUrl"`
 	Comment string `json:"comment"`
-	Rating int `json:"rating" binding:"required"`
+	Rating *int `json:"rating"`
 }

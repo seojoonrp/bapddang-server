@@ -1,3 +1,4 @@
+// utils/similarity.go
 // 검증 안해봄
 
 package utils

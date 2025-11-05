@@ -36,7 +36,7 @@ func (s *reviewService) CreateReview(input models.CreateReviewInput, user models
 		Tags: input.Tags,
 		ImageURL: input.ImageURL,
 		Comment: input.Comment,
-		Rating: input.Rating,
+		Rating: *input.Rating,
 		Day: user.Day,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
