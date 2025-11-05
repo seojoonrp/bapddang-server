@@ -72,3 +72,19 @@ func (h *FoodHandler) FindOrCreateCustomFood(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, customFood)
 }
+
+func (h *FoodHandler) ValidateFoods(ctx *gin.Context) {
+	var input models.ValidateFoodsInput
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+
+	results, err := h.foodService.ValidateFoods(input.Names)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate foods"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"results": results})
+}

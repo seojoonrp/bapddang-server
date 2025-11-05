@@ -42,3 +42,14 @@ type CustomFood struct {
 type NewCustomFoodInput struct {
 	Name string `json:"name"`
 }
+
+type ValidateFoodsInput struct {
+	Names []string `json:"names" binding:"required,min=1"`
+}
+
+type ValidationResult struct {
+	Status string `json:"status"`
+	OriginalName string `json:"originalName"`
+	Food any `json:"food,omitempty"`
+	Suggestion any `json:"suggestion,omitempty"`
+}

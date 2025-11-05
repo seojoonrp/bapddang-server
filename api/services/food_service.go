@@ -15,6 +15,7 @@ type FoodService interface {
 	GetStandardFoodByID(id string) (*models.StandardFood, error)
 	CreateStandardFood(input models.NewStandardFoodInput) (*models.StandardFood, error)
 	FindOrCreateCustomFood(input models.NewCustomFoodInput, user models.User) (*models.CustomFood, error)
+	ValidateFoods(names []string) ([]models.ValidationResult, error)
 }
 
 type foodService struct {
@@ -82,4 +83,49 @@ func (s *foodService) FindOrCreateCustomFood(input models.NewCustomFoodInput, us
 	}
 
 	return existingFood, nil
+}
+
+func (s *foodService) ValidateFoods(names []string) ([]models.ValidationResult, error) {
+	results := make([]models.ValidationResult, 0, len(names))
+
+	for _, name := range names {
+		result := models.ValidationResult{OriginalName: name}
+
+		standardFood, err := s.foodRepo.FindStandardFoodByName(name)
+		if err == nil {
+			result.Status = "ok"
+			result.Food = standardFood
+			results = append(results, result)
+			continue
+		}
+
+		customFood, err := s.foodRepo.FindCustomFoodByName(name)
+		if err == nil {
+			result.Status = "ok"
+			result.Food = customFood
+			results = append(results, result)
+			continue
+		}
+
+		standardSuggestion, err := s.foodRepo.SearchSimilarStandardFood(name)
+		if err == nil {
+			result.Status = "suggestion"
+			result.Suggestion = standardSuggestion
+			results = append(results, result)
+			continue
+		}
+
+		customSuggestion, err := s.foodRepo.SearchSimilarCustomFood(name)
+		if err == nil {
+			result.Status = "suggestion"
+			result.Suggestion = customSuggestion
+			results = append(results, result)
+			continue
+		}
+
+		result.Status = "new"
+		results = append(results, result)
+	}
+
+	return results, nil
 }
