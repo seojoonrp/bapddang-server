@@ -25,7 +25,7 @@ func SetupRoutes(router *gin.Engine, db *mongo.Database) {
 
 	reviewCollection := db.Collection("reviews")
 	reviewRepository := repositories.NewReviewRepository(reviewCollection)
-	reviewService := services.NewReviewService(reviewRepository)
+	reviewService := services.NewReviewService(reviewRepository, foodRepository)
 	reviewHandler := handlers.NewReviewHandler(reviewService)
 
 	apiV1 := router.Group("/api/v1")

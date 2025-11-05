@@ -17,15 +17,25 @@ type ReviewService interface {
 
 type reviewService struct {
 	reviewRepo repositories.ReviewRepository
+	foodRepo repositories.FoodRepository
 }
 
-func NewReviewService(repo repositories.ReviewRepository) ReviewService {
+func NewReviewService(reviewRepo repositories.ReviewRepository, foodRepo repositories.FoodRepository) ReviewService {
 	return &reviewService{
-		reviewRepo: repo,
+		reviewRepo: reviewRepo,
+		foodRepo: foodRepo,
 	}
 }
 
 func (s *reviewService) CreateReview(input models.CreateReviewInput, user models.User) (*models.Review, error) {
+	standardFoodIDs := make([]primitive.ObjectID, 0)
+
+	for _, food := range input.Foods {
+		if food.FoodType == "standard" {
+			standardFoodIDs = append(standardFoodIDs, food.FoodID)
+		}
+	}
+
 	newReview := models.Review {
 		ID: primitive.NewObjectID(),
 		UserID: user.ID,
@@ -36,16 +46,22 @@ func (s *reviewService) CreateReview(input models.CreateReviewInput, user models
 		Tags: input.Tags,
 		ImageURL: input.ImageURL,
 		Comment: input.Comment,
-		Rating: *input.Rating,
+		Rating: input.Rating,
 		Day: user.Day,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
+
 	err := s.reviewRepo.SaveReview(&newReview)
 	if err != nil {
 		return nil, err
 	}
-	return &newReview, err
+
+	if len(standardFoodIDs) > 0 {
+		go s.foodRepo.UpdateReviewStats(standardFoodIDs, input.Rating)
+	}
+
+	return &newReview, nil
 }
 
 func (s *reviewService) GetMyReviewsByDay(userID primitive.ObjectID, day int) ([]models.Review, error) {
