@@ -1,0 +1,10 @@
+version: "3.8"
+
+services:
+  bapddang-server:
+    build: .
+    container_name: bapddang-server
+    ports:
+      - "80:8080"
+    env_file:
+      - .env
