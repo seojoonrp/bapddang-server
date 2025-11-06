@@ -3,6 +3,9 @@
 package services
 
 import (
+	"log"
+	"math/rand"
+	"sync"
 	"time"
 
 	"github.com/seojoonrp/bapddang-server/api/repositories"
@@ -15,17 +18,34 @@ type FoodService interface {
 	GetStandardFoodByID(id string) (*models.StandardFood, error)
 	CreateStandardFood(input models.NewStandardFoodInput) (*models.StandardFood, error)
 	FindOrCreateCustomFood(input models.NewCustomFoodInput, user models.User) (*models.CustomFood, error)
+
+	GetMainFeedFoods(foodType, speed string) ([]*models.StandardFood, error)
 	ValidateFoods(names []string) ([]models.ValidationResult, error)
 	UpdateReviewStats(foodIDs []primitive.ObjectID, rating *int) error
 }
 
 type foodService struct {
 	foodRepo repositories.FoodRepository
+	standardFoodCache []*models.StandardFood
+	customFoodCache []*models.CustomFood
+	cacheLock sync.RWMutex
 }
 
-func NewFoodService(repo repositories.FoodRepository) FoodService {
+func NewFoodService(foodRepo repositories.FoodRepository) FoodService {
+	allStandardFoods, err := foodRepo.GetAllStandardFoods()
+	if err != nil {
+		log.Fatal("FATAL: Failed to load standard food cache: ", err)
+	}
+	allCustomFoods, err := foodRepo.GetAllCustomFoods()
+	if err != nil {
+		log.Fatal("FATAL: Failed to load custom food cache: ", err)
+	}
+
 	return &foodService{
-		foodRepo: repo,
+		foodRepo: foodRepo,
+		standardFoodCache: allStandardFoods,
+		customFoodCache: allCustomFoods,
+		cacheLock: sync.RWMutex{},
 	}
 }
 
@@ -58,12 +78,18 @@ func (s *foodService) CreateStandardFood(input models.NewStandardFoodInput) (*mo
 		ReviewCount: 0,
 		RatedReviewCount: 0,
 		TotalRating: 0,
+		AverageRating: 0.0,
 		TrendScore: 0,
 	}
 	err := s.foodRepo.SaveStandardFood(newFood)
 	if err != nil {
 		return nil, err
 	}
+
+	s.cacheLock.Lock()
+	s.standardFoodCache = append(s.standardFoodCache, newFood)
+	s.cacheLock.Unlock()
+	
 	return newFood, nil
 }
 
@@ -81,6 +107,11 @@ func (s *foodService) FindOrCreateCustomFood(input models.NewCustomFoodInput, us
 		if err != nil {
 			return nil, err
 		}
+
+		s.cacheLock.Lock()
+		s.customFoodCache = append(s.customFoodCache, newFood)
+		s.cacheLock.Unlock()
+
 		return newFood, nil
 	}
 
@@ -92,8 +123,64 @@ func (s *foodService) FindOrCreateCustomFood(input models.NewCustomFoodInput, us
 	if err != nil {
 		return nil, err
 	}
-
+	
 	return existingFood, nil
+}
+
+func (s *foodService) GetMainFeedFoods(foodType, speed string) ([]*models.StandardFood, error) {
+	foodCount := 10
+
+	s.cacheLock.RLock()
+	defer s.cacheLock.RUnlock()
+	
+	candidates := make([]*models.StandardFood, 0)
+	for _, food := range s.standardFoodCache {
+		if food.Type == foodType && food.Speed == speed {
+			candidates = append(candidates, food)
+		}
+	}
+
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r.Shuffle(len(candidates), func(i, j int) {
+		candidates[i], candidates[j] = candidates[j], candidates[i]
+	})
+
+	resultList := make([]*models.StandardFood, 0, foodCount)
+	usedCategories := make(map[string]bool)
+
+	for _, food := range candidates {
+		if len(resultList) >= foodCount {
+			break
+		}
+		if len(food.Categories) == 0 {
+			resultList = append(resultList, food)
+			continue
+		}
+
+		uniqueCategory := true
+		for _, category := range food.Categories {
+			if usedCategories[category] {
+				uniqueCategory = false
+				break
+			}
+		}
+		if uniqueCategory {
+			resultList = append(resultList, food)
+			for _, category := range food.Categories {
+				usedCategories[category] = true
+			}
+		}
+	}
+
+	for _, food := range resultList {
+		if food.RatedReviewCount > 0 {
+			food.AverageRating = float64(food.TotalRating) / float64(food.RatedReviewCount)
+		} else {
+			food.AverageRating = 0.0
+		}
+	}
+
+	return resultList, nil
 }
 
 func (s *foodService) ValidateFoods(names []string) ([]models.ValidationResult, error) {

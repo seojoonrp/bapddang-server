@@ -15,6 +15,8 @@ type FoodRepository interface {
 	FindStandardFoodByID(id primitive.ObjectID) (*models.StandardFood, error)
 	FindStandardFoodByName(name string) (*models.StandardFood, error)
 	FindCustomFoodByName(name string) (*models.CustomFood, error)
+	GetAllStandardFoods() ([]*models.StandardFood, error)
+	GetAllCustomFoods() ([]*models.CustomFood, error)
 
 	SaveCustomFood(food *models.CustomFood) error
 	SaveStandardFood(food *models.StandardFood) error
@@ -65,6 +67,40 @@ func (r *foodRepository) FindCustomFoodByName(name string) (*models.CustomFood, 
 		return nil, err
 	}
 	return &food, nil
+}
+
+func (r *foodRepository) GetAllStandardFoods() ([]*models.StandardFood, error) {
+	var foods []*models.StandardFood
+
+	filter := bson.M{}
+	cursor, err := r.standardFoodCollection.Find(context.TODO(), filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.TODO())
+
+	if err = cursor.All(context.TODO(), &foods); err != nil {
+		return nil, err
+	}
+
+	return foods, nil
+}
+
+func (r *foodRepository) GetAllCustomFoods() ([]*models.CustomFood, error) {
+	var foods []*models.CustomFood
+
+	filter := bson.M{}
+	cursor, err := r.customFoodCollection.Find(context.TODO(), filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.TODO())
+
+	if err = cursor.All(context.TODO(), &foods); err != nil {
+		return nil, err
+	}
+
+	return foods, nil
 }
 
 func (r *foodRepository) SaveStandardFood(food *models.StandardFood) error {
