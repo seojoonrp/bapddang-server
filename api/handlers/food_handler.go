@@ -22,7 +22,7 @@ func NewFoodHandler(foodService services.FoodService) *FoodHandler {
 }
 
 func (h *FoodHandler) GetStandardFoodByID(ctx *gin.Context) {
-	foodIDStr := ctx.Param("foodId")
+	foodIDStr := ctx.Param("foodID")
 
 	food, err := h.foodService.GetStandardFoodByID(foodIDStr)
 	if err != nil {

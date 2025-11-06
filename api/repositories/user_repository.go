@@ -14,8 +14,8 @@ import (
 type UserRepository interface {
 	FindByEmail(email string) (*models.User, error)
 	Save(user *models.User) error
-	AddLikedFood(userID, foodID primitive.ObjectID) error
-	RemoveLikedFood(userID, foodID primitive.ObjectID) error
+	AddLikedFood(userID, foodID primitive.ObjectID) (bool, error)
+	RemoveLikedFood(userID, foodID primitive.ObjectID) (bool, error)
 }
 
 type userRepository struct {
@@ -40,18 +40,24 @@ func (r *userRepository) Save(user *models.User) error {
 	return err
 }
 
-func (r *userRepository) AddLikedFood(userID, foodID primitive.ObjectID) error {
+func (r *userRepository) AddLikedFood(userID, foodID primitive.ObjectID) (bool, error) {
 	filter := bson.M{"_id": userID}
 	update := bson.M{"$addToSet": bson.M{"likedFoodIDs": foodID}}
 
-	_, err := r.collection.UpdateOne(context.TODO(), filter, update)
-	return err
+	result, err := r.collection.UpdateOne(context.TODO(), filter, update)
+	if err != nil {
+		return false, err
+	}
+	return result.ModifiedCount > 0, nil
 }
 
-func (r *userRepository) RemoveLikedFood(userID, foodID primitive.ObjectID) error {
+func (r *userRepository) RemoveLikedFood(userID, foodID primitive.ObjectID) (bool, error) {
 	filter := bson.M{"_id": userID}
 	update := bson.M{"$pull": bson.M{"likedFoodIDs": foodID}}
 
-	_, err := r.collection.UpdateOne(context.TODO(), filter, update)
-	return err
+	result, err := r.collection.UpdateOne(context.TODO(), filter, update)
+	if err != nil {
+		return false, err
+	}
+	return result.ModifiedCount > 0, nil
 }

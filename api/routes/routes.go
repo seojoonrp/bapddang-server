@@ -14,17 +14,20 @@ import (
 func SetupRoutes(router *gin.Engine, db *mongo.Database) {
 	userCollection := db.Collection("users")
 	userRepository := repositories.NewUserRepository(userCollection)
-	userService := services.NewUserService(userRepository)
-	userHandler := handlers.NewUserHandler(userService)
 
 	standardFoodCollection := db.Collection("standard-foods")
 	customFoodCollection := db.Collection("custom-foods")
 	foodRepository := repositories.NewFoodRepository(standardFoodCollection, customFoodCollection)
-	foodService := services.NewFoodService(foodRepository)
-	foodHandler := handlers.NewFoodHandler(foodService)
 
 	reviewCollection := db.Collection("reviews")
 	reviewRepository := repositories.NewReviewRepository(reviewCollection)
+
+	userService := services.NewUserService(userRepository, foodRepository)
+	userHandler := handlers.NewUserHandler(userService)
+
+	foodService := services.NewFoodService(foodRepository)
+	foodHandler := handlers.NewFoodHandler(foodService)
+
 	reviewService := services.NewReviewService(reviewRepository, foodRepository)
 	reviewHandler := handlers.NewReviewHandler(reviewService)
 
@@ -39,15 +42,15 @@ func SetupRoutes(router *gin.Engine, db *mongo.Database) {
 		protected := apiV1.Group("/")
 		protected.Use(middleware.AuthMiddleware(userCollection))
 		{
-			protected.POST("/foods/:foodId/like", userHandler.LikeFood)
-			protected.DELETE("/foods/:foodId/like", userHandler.UnlikeFood)
+			protected.POST("/foods/:foodID/like", userHandler.LikeFood)
+			protected.DELETE("/foods/:foodID/like", userHandler.UnlikeFood)
 			protected.POST("/custom-foods", foodHandler.FindOrCreateCustomFood)
 			protected.POST("/foods/validate", foodHandler.ValidateFoods)
 			protected.POST("/reviews", reviewHandler.CreateReview)
 			protected.GET("/reviews/me", reviewHandler.GetMyReviewsByDay)
 		}
 
-		apiV1.GET("/foods/:foodId", foodHandler.GetStandardFoodByID)
+		apiV1.GET("/foods/:foodID", foodHandler.GetStandardFoodByID)
 
 		adminRoutes := apiV1.Group("/admin")
 		{

@@ -58,13 +58,17 @@ func (h *UserHandler) LikeFood(ctx *gin.Context) {
 	foodIDHex := ctx.Param("foodID")
 	foodID, _ := primitive.ObjectIDFromHex(foodIDHex)
 
-	err := h.userService.LikeFood(userID, foodID)
+	wasAdded, err := h.userService.LikeFood(userID, foodID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "Food liked successfully"})
+	if wasAdded {
+		ctx.JSON(http.StatusOK, gin.H{"message": "Food liked successfully"})
+	} else {
+		ctx.JSON(http.StatusOK, gin.H{"message": "Food is already liked"})
+	}
 }
 
 func (h *UserHandler) UnlikeFood(ctx *gin.Context) {
@@ -74,11 +78,15 @@ func (h *UserHandler) UnlikeFood(ctx *gin.Context) {
 	foodIDHex := ctx.Param("foodID")
 	foodID, _ := primitive.ObjectIDFromHex(foodIDHex)
 
-	err := h.userService.UnlikeFood(userID, foodID)
+	wasRemoved, err := h.userService.UnlikeFood(userID, foodID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "Food unliked successfully"})
+	if wasRemoved {
+		ctx.JSON(http.StatusOK, gin.H{"message": "Food unliked successfully"})
+	} else {
+		ctx.JSON(http.StatusOK, gin.H{"message": "Food was not liked"})
+	}
 }

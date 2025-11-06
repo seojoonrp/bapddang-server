@@ -16,16 +16,17 @@ import (
 type UserService interface {
 	SignUp(input models.SignUpInput) (*models.User, error)
 	Login(input models.LoginInput) (string, error)
-	LikeFood(userID, foodID primitive.ObjectID) error
-	UnlikeFood(userID, foodID primitive.ObjectID) error
+	LikeFood(userID, foodID primitive.ObjectID) (bool, error)
+	UnlikeFood(userID, foodID primitive.ObjectID) (bool, error)
 }
 
 type userService struct {
 	userRepo repositories.UserRepository
+	foodRepo repositories.FoodRepository
 }
 
-func NewUserService(userRepo repositories.UserRepository) UserService {
-	return &userService{userRepo: userRepo}
+func NewUserService(userRepo repositories.UserRepository, foodRepo repositories.FoodRepository) UserService {
+	return &userService{userRepo: userRepo, foodRepo: foodRepo}
 }
 
 func (s *userService) SignUp(input models.SignUpInput) (*models.User, error) {
@@ -71,10 +72,34 @@ func (s *userService) Login(input models.LoginInput) (string, error) {
 	return token.SignedString([]byte(config.AppConfig.JWTSecret))
 }
 
-func (s *userService) LikeFood(userID, foodID primitive.ObjectID) error {
-	return s.userRepo.AddLikedFood(userID, foodID)
+func (s *userService) LikeFood(userID, foodID primitive.ObjectID) (bool, error) {
+	wasAdded, err := s.userRepo.AddLikedFood(userID, foodID)
+	if err != nil {
+		return false, err
+	}
+
+	if wasAdded {
+		err = s.foodRepo.IncrementLikeCount(foodID)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	return wasAdded, nil
 }
 
-func (s *userService) UnlikeFood(userID, foodID primitive.ObjectID) error {
-	return s.userRepo.RemoveLikedFood(userID, foodID)
+func (s *userService) UnlikeFood(userID, foodID primitive.ObjectID) (bool, error) {
+	wasRemoved, err := s.userRepo.RemoveLikedFood(userID, foodID)
+	if err != nil {
+		return false, err
+	}
+
+	if wasRemoved {
+		err = s.foodRepo.DecrementLikeCount(foodID)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	return wasRemoved, nil
 }
