@@ -73,6 +73,27 @@ func (h *FoodHandler) FindOrCreateCustomFood(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, customFood)
 }
 
+func (h *FoodHandler) GetMainFeedFoods(ctx *gin.Context) {
+	foodType := ctx.Query("type")
+	if foodType != "meal" && foodType != "dessert" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid food type"})
+		return
+	}
+	speed := ctx.Query("speed")
+	if speed != "fast" && speed != "slow" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid speed"})
+		return
+	}
+
+	selectedFoods, err := h.foodService.GetMainFeedFoods(foodType, speed)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get main feed foods"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, selectedFoods)
+}
+
 func (h *FoodHandler) ValidateFoods(ctx *gin.Context) {
 	var input models.ValidateFoodsInput
 	if err := ctx.ShouldBindJSON(&input); err != nil {

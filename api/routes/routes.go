@@ -51,6 +51,7 @@ func SetupRoutes(router *gin.Engine, db *mongo.Database) {
 		}
 
 		apiV1.GET("/foods/:foodID", foodHandler.GetStandardFoodByID)
+		apiV1.GET("/foods/main-feed", foodHandler.GetMainFeedFoods)
 
 		adminRoutes := apiV1.Group("/admin")
 		{
