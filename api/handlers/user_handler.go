@@ -51,6 +51,16 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"token": tokenString})
 }
 
+func (h *UserHandler) GetMe(ctx *gin.Context) {
+	userCtx, exists := ctx.Get("currentUser")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, userCtx)
+}
+
 func (h *UserHandler) LikeFood(ctx *gin.Context) {
 	userCtx, _ := ctx.Get("currentUser")
 	userID := userCtx.(models.User).ID

@@ -42,10 +42,13 @@ func SetupRoutes(router *gin.Engine, db *mongo.Database) {
 		protected := apiV1.Group("/")
 		protected.Use(middleware.AuthMiddleware(userCollection))
 		{
+			protected.GET("/auth/me", userHandler.GetMe)
+
 			protected.POST("/foods/:foodID/like", userHandler.LikeFood)
 			protected.DELETE("/foods/:foodID/like", userHandler.UnlikeFood)
 			protected.POST("/custom-foods", foodHandler.FindOrCreateCustomFood)
 			protected.POST("/foods/validate", foodHandler.ValidateFoods)
+			
 			protected.POST("/reviews", reviewHandler.CreateReview)
 			protected.GET("/reviews/me", reviewHandler.GetMyReviewsByDay)
 		}
