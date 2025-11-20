@@ -49,9 +49,16 @@ type ValidateFoodsInput struct {
 	Names []string `json:"names" binding:"required,min=1"`
 }
 
+type ValidationOutput struct {
+	ID primitive.ObjectID `json:"id"`
+	Name string `json:"name"`
+	Type string `json:"type"`
+}
+
 type ValidationResult struct {
 	Status string `json:"status"`
 	OriginalName string `json:"originalName"`
-	Food any `json:"food,omitempty"`
-	Suggestion any `json:"suggestion,omitempty"`
+	OkOutput ValidationOutput `json:"okOutput,omitempty"`
+	SuggestionOutputs []ValidationOutput `json:"suggestionOutputs,omitempty"`
+	NewOutput ValidationOutput `json:"newOutput,omitempty"`
 }

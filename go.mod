@@ -8,10 +8,8 @@ require (
 	github.com/gin-gonic/gin v1.11.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/joho/godotenv v1.5.1
-	github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342
 	go.mongodb.org/mongo-driver v1.17.4
 	golang.org/x/crypto v0.42.0
-	golang.org/x/text v0.29.0
 )
 
 require (
@@ -65,6 +63,7 @@ require (
 	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/sys v0.36.0 // indirect
+	golang.org/x/text v0.29.0 // indirect
 	golang.org/x/tools v0.36.0 // indirect
 	google.golang.org/protobuf v1.36.9 // indirect
 )

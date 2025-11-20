@@ -6,11 +6,13 @@ import (
 	"errors"
 	"log"
 	"math/rand"
+	"sort"
 	"sync"
 	"time"
 
 	"github.com/seojoonrp/bapddang-server/api/repositories"
 	"github.com/seojoonrp/bapddang-server/models"
+	"github.com/seojoonrp/bapddang-server/utils"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -21,7 +23,7 @@ type FoodService interface {
 	FindOrCreateCustomFood(input models.NewCustomFoodInput, user models.User) (*models.CustomFood, error)
 
 	GetMainFeedFoods(foodType, speed string, foodCount int) ([]*models.StandardFood, error)
-	ValidateFoods(names []string) ([]models.ValidationResult, error)
+	ValidateFoods(names []string, userID primitive.ObjectID) ([]models.ValidationResult, error)
 	UpdateReviewStats(foodIDs []primitive.ObjectID, rating *int) error
 }
 
@@ -189,8 +191,16 @@ func (s *foodService) GetMainFeedFoods(foodType, speed string, foodCount int) ([
 	return resultList, nil
 }
 
-func (s *foodService) ValidateFoods(names []string) ([]models.ValidationResult, error) {
+type matchCandidates struct {
+	Score float64
+	Output models.ValidationOutput
+}
+
+func (s *foodService) ValidateFoods(names []string, userID primitive.ObjectID) ([]models.ValidationResult, error) {
 	results := make([]models.ValidationResult, 0, len(names))
+
+	const similarityThreshold = 0.6
+	const maxSuggestions = 3
 
 	for _, name := range names {
 		result := models.ValidationResult{OriginalName: name}
@@ -198,7 +208,11 @@ func (s *foodService) ValidateFoods(names []string) ([]models.ValidationResult, 
 		standardFood, err := s.foodRepo.FindStandardFoodByName(name)
 		if err == nil {
 			result.Status = "ok"
-			result.Food = standardFood
+			result.OkOutput = models.ValidationOutput{
+				ID: standardFood.ID,
+				Name: standardFood.Name,
+				Type: "standard",
+			}
 			results = append(results, result)
 			continue
 		}
@@ -206,28 +220,90 @@ func (s *foodService) ValidateFoods(names []string) ([]models.ValidationResult, 
 		customFood, err := s.foodRepo.FindCustomFoodByName(name)
 		if err == nil {
 			result.Status = "ok"
-			result.Food = customFood
+			result.OkOutput = models.ValidationOutput{
+				ID: customFood.ID,
+				Name: customFood.Name,
+				Type: "custom",
+			}
 			results = append(results, result)
 			continue
 		}
 
-		standardSuggestion, err := s.foodRepo.SearchSimilarStandardFood(name)
-		if err == nil {
-			result.Status = "suggestion"
-			result.Suggestion = standardSuggestion
+		var candidates []matchCandidates
+
+		s.cacheLock.RLock()
+
+		for _, food := range s.standardFoodCache {
+			score := utils.Score(name, food.Name)
+			if score >= similarityThreshold {
+				candidates = append(candidates, matchCandidates{
+					Score: score,
+					Output: models.ValidationOutput{
+						ID: food.ID,
+						Name: food.Name,
+						Type: "standard",
+					},
+				})
+			}
+		}
+
+		for _, food := range s.customFoodCache {
+			score := utils.Score(name, food.Name)
+			if score >= similarityThreshold {
+				candidates = append(candidates, matchCandidates{
+					Score: score,
+					Output: models.ValidationOutput{
+						ID: food.ID,
+						Name: food.Name,
+						Type: "custom",
+					},
+				})
+			}
+		}
+
+		s.cacheLock.RUnlock()
+
+		if len(candidates) == 0 {
+			s.cacheLock.Lock()
+
+			// TODO : Lock 걸면서 중복 생성됐는지 이중체크
+			
+			newCustomFood := &models.CustomFood{
+				ID: primitive.NewObjectID(),
+				Name: name,
+				UsingUserIDs: []primitive.ObjectID{userID},
+				CreatedAt: time.Now(),
+			}
+
+			err := s.foodRepo.SaveCustomFood(newCustomFood)
+			if err != nil {
+				s.cacheLock.Unlock()
+				return nil, err
+			}
+
+			s.customFoodCache = append(s.customFoodCache, newCustomFood)
+
+			result.Status = "new"
+			result.NewOutput = models.ValidationOutput{
+				Name: name,
+				Type: "new",
+			}
 			results = append(results, result)
+
+			s.cacheLock.Unlock()
 			continue
 		}
 
-		customSuggestion, err := s.foodRepo.SearchSimilarCustomFood(name)
-		if err == nil {
-			result.Status = "suggestion"
-			result.Suggestion = customSuggestion
-			results = append(results, result)
-			continue
+		sort.Slice(candidates, func(i, j int) bool {
+			return candidates[i].Score > candidates[j].Score
+		})
+
+		limit := min(len(candidates), maxSuggestions)
+		for i := range limit {
+			result.SuggestionOutputs = append(result.SuggestionOutputs, candidates[i].Output)
 		}
 
-		result.Status = "new"
+		result.Status = "suggestion"
 		results = append(results, result)
 	}
 

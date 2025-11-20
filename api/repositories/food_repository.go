@@ -25,9 +25,6 @@ type FoodRepository interface {
 	UpdateReviewStats(foodID []primitive.ObjectID, rating *int) error
 	IncrementLikeCount(foodID primitive.ObjectID) error
 	DecrementLikeCount(foodID primitive.ObjectID) error
-
-	SearchSimilarStandardFood(name string) (*models.StandardFood, error)
-	SearchSimilarCustomFood(name string) (*models.CustomFood, error)
 }
 
 type foodRepository struct {
@@ -136,22 +133,6 @@ func (r *foodRepository) UpdateReviewStats(foodIDs []primitive.ObjectID, rating 
 	update := bson.M{"$inc": incMap}
 	_, err := r.standardFoodCollection.UpdateMany(context.TODO(), filter, update)
 	return err
-}
-
-func (r *foodRepository) SearchSimilarStandardFood(name string) (*models.StandardFood, error) {
-	var food models.StandardFood
-
-	filter := bson.M{"name": bson.M{"$regex": primitive.Regex{Pattern: name, Options: "i"}}}
-	err := r.standardFoodCollection.FindOne(context.TODO(), filter).Decode(&food)
-	return &food, err
-}
-
-func (r *foodRepository) SearchSimilarCustomFood(name string) (*models.CustomFood, error) {
-	var food models.CustomFood
-
-	filter := bson.M{"name": bson.M{"$regex": primitive.Regex{Pattern: name, Options: "i"}}}
-	err := r.customFoodCollection.FindOne(context.TODO(), filter).Decode(&food)
-	return &food, err
 }
 
 func (r *foodRepository) IncrementLikeCount(foodID primitive.ObjectID) error {

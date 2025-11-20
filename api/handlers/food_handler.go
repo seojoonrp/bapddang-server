@@ -120,7 +120,14 @@ func (h *FoodHandler) ValidateFoods(ctx *gin.Context) {
 		return
 	}
 
-	results, err := h.foodService.ValidateFoods(input.Names)
+	userCtx, exists := ctx.Get("currentUser")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
+		return
+	}
+	user := userCtx.(models.User)
+
+	results, err := h.foodService.ValidateFoods(input.Names, user.ID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate foods"})
 		return
