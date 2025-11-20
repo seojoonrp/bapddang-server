@@ -113,3 +113,21 @@ func (h *UserHandler) UnlikeFood(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{"message": "Food was not liked"})
 	}
 }
+
+func (h *UserHandler) GetLikedFoods(ctx *gin.Context) {
+	userCtx, exists := ctx.Get("currentUser")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
+		return
+	}
+
+	userID := userCtx.(models.User).ID
+
+	likedFoodIDs, err := h.userService.GetLikedFoods(userID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"likedFoodIDs": likedFoodIDs})
+}

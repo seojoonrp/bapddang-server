@@ -16,6 +16,7 @@ type UserRepository interface {
 	Save(user *models.User) error
 	AddLikedFood(userID, foodID primitive.ObjectID) (bool, error)
 	RemoveLikedFood(userID, foodID primitive.ObjectID) (bool, error)
+	GetLikedFoods(userID primitive.ObjectID) ([]primitive.ObjectID, error)
 }
 
 type userRepository struct {
@@ -60,4 +61,13 @@ func (r *userRepository) RemoveLikedFood(userID, foodID primitive.ObjectID) (boo
 		return false, err
 	}
 	return result.ModifiedCount > 0, nil
+}
+
+func (r *userRepository) GetLikedFoods(userID primitive.ObjectID) ([]primitive.ObjectID, error) {
+	var user models.User
+	err := r.collection.FindOne(context.TODO(), bson.M{"_id": userID}).Decode(&user)
+	if err != nil {
+		return nil, err
+	}
+	return user.LikedFoodIDs, nil
 }

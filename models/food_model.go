@@ -11,7 +11,7 @@ import (
 type StandardFood struct {
 	ID primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	Name string `bson:"name" json:"name" binding:"required"`
-	ImageURL string `bson:"imageURL" json:"imageUrl" binding:"required"`
+	ImageURL string `bson:"imageURL" json:"imageURL" binding:"required"`
 
 	Speed string `bson:"speed" json:"speed" binding:"required"`
 	Type string `bson:"type" json:"type" binding:"required"`
