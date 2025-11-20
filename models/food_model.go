@@ -58,7 +58,7 @@ type ValidationOutput struct {
 type ValidationResult struct {
 	Status string `json:"status"`
 	OriginalName string `json:"originalName"`
-	OkOutput ValidationOutput `json:"okOutput,omitempty"`
+	OkOutput *ValidationOutput `json:"okOutput,omitempty"`
 	SuggestionOutputs []ValidationOutput `json:"suggestionOutputs,omitempty"`
-	NewOutput ValidationOutput `json:"newOutput,omitempty"`
+	NewOutput *ValidationOutput `json:"newOutput,omitempty"`
 }

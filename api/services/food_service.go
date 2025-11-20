@@ -195,11 +195,11 @@ type matchCandidates struct {
 	Score float64
 	Output models.ValidationOutput
 }
-
+	
 func (s *foodService) ValidateFoods(names []string, userID primitive.ObjectID) ([]models.ValidationResult, error) {
 	results := make([]models.ValidationResult, 0, len(names))
 
-	const similarityThreshold = 0.6
+	const similarityThreshold = 0.75
 	const maxSuggestions = 3
 
 	for _, name := range names {
@@ -208,7 +208,7 @@ func (s *foodService) ValidateFoods(names []string, userID primitive.ObjectID) (
 		standardFood, err := s.foodRepo.FindStandardFoodByName(name)
 		if err == nil {
 			result.Status = "ok"
-			result.OkOutput = models.ValidationOutput{
+			result.OkOutput = &models.ValidationOutput{
 				ID: standardFood.ID,
 				Name: standardFood.Name,
 				Type: "standard",
@@ -220,7 +220,7 @@ func (s *foodService) ValidateFoods(names []string, userID primitive.ObjectID) (
 		customFood, err := s.foodRepo.FindCustomFoodByName(name)
 		if err == nil {
 			result.Status = "ok"
-			result.OkOutput = models.ValidationOutput{
+			result.OkOutput = &models.ValidationOutput{
 				ID: customFood.ID,
 				Name: customFood.Name,
 				Type: "custom",
@@ -284,7 +284,7 @@ func (s *foodService) ValidateFoods(names []string, userID primitive.ObjectID) (
 			s.customFoodCache = append(s.customFoodCache, newCustomFood)
 
 			result.Status = "new"
-			result.NewOutput = models.ValidationOutput{
+			result.NewOutput = &models.ValidationOutput{
 				Name: name,
 				Type: "new",
 			}
