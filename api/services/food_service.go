@@ -184,6 +184,8 @@ func (s *foodService) GetMainFeedFoods(foodType, speed string, foodCount int) ([
 		}
 	}
 
+	log.Printf("Selected %d foods: %+v", len(resultList), resultList)
+
 	return resultList, nil
 }
 
