@@ -67,33 +67,40 @@ func AuthMiddleware(userCollection *mongo.Collection) gin.HandlerFunc {
 				return
 			}
 
-			loc, err := time.LoadLocation("Asia/Seoul")
-			if err != nil {
-				ctx.Next()
-				return
-			}
-
-			nowKST := time.Now().In(loc)
-			createdAtKST := user.CreatedAt.In(loc)
-			endDate := time.Date(nowKST.Year(), nowKST.Month(), nowKST.Day(), 0, 0, 0, 0, loc)
-			startDate := time.Date(createdAtKST.Year(), createdAtKST.Month(), createdAtKST.Day(), 0, 0, 0, 0, loc)
-			daysPassed := int(endDate.Sub(startDate).Hours() / 24)
-			curDay := daysPassed + 1
-
-			if user.Day < curDay {
-				user.Day = curDay
-
-				go func() {
-					filter := bson.M{"_id": user.ID}
-					update := bson.M{"$set": bson.M{"day": user.Day}}
-					userCollection.UpdateOne(context.Background(), filter, update)
-				}()
-			}
-
 			ctx.Set("currentUser", user)
+
+			go updateUserDay(user, userCollection)
+
 			ctx.Next()
 		} else {
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+		}
+	}
+}
+
+func updateUserDay(user models.User, userCollection *mongo.Collection) {
+	loc, err := time.LoadLocation("Asia/Seoul")
+
+	if err != nil {
+		log.Printf("WARNING: Failed to load timezone data")
+		return
+	}
+
+	nowKST := time.Now().In(loc)
+	createdAtKST := user.CreatedAt.In(loc)
+	endDate := time.Date(nowKST.Year(), nowKST.Month(), nowKST.Day(), 0, 0, 0, 0, loc)
+	startDate := time.Date(createdAtKST.Year(), createdAtKST.Month(), createdAtKST.Day(), 0, 0, 0, 0, loc)
+	daysPassed := int(endDate.Sub(startDate).Hours() / 24)
+	curDay := daysPassed + 1
+
+	if user.Day < curDay {
+		user.Day = curDay
+
+		filter := bson.M{"_id": user.ID}
+		update := bson.M{"$set": bson.M{"day": user.Day}}
+		_, err := userCollection.UpdateOne(context.Background(), filter, update)
+		if err != nil {
+			log.Printf("Failed to update user day: %v", err)
 		}
 	}
 }

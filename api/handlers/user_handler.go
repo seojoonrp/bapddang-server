@@ -28,6 +28,11 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 
 	user, err := h.userService.SignUp(input)
 	if err != nil {
+		if err.Error() == "user already exists" {
+			ctx.JSON(http.StatusConflict, gin.H{"error": "User already exists"})
+			return
+		}
+
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -62,7 +67,11 @@ func (h *UserHandler) GetMe(ctx *gin.Context) {
 }
 
 func (h *UserHandler) LikeFood(ctx *gin.Context) {
-	userCtx, _ := ctx.Get("currentUser")
+	userCtx, exists := ctx.Get("currentUser")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
+		return
+	}
 	userID := userCtx.(models.User).ID
 
 	foodIDHex := ctx.Param("foodID")
@@ -82,7 +91,11 @@ func (h *UserHandler) LikeFood(ctx *gin.Context) {
 }
 
 func (h *UserHandler) UnlikeFood(ctx *gin.Context) {
-	userCtx, _ := ctx.Get("currentUser")
+	userCtx, exists := ctx.Get("currentUser")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
+		return
+	}
 	userID := userCtx.(models.User).ID
 
 	foodIDHex := ctx.Param("foodID")

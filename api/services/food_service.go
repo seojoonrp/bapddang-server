@@ -3,6 +3,7 @@
 package services
 
 import (
+	"errors"
 	"log"
 	"math/rand"
 	"sync"
@@ -19,7 +20,7 @@ type FoodService interface {
 	CreateStandardFood(input models.NewStandardFoodInput) (*models.StandardFood, error)
 	FindOrCreateCustomFood(input models.NewCustomFoodInput, user models.User) (*models.CustomFood, error)
 
-	GetMainFeedFoods(foodType, speed string) ([]*models.StandardFood, error)
+	GetMainFeedFoods(foodType, speed string, foodCount int) ([]*models.StandardFood, error)
 	ValidateFoods(names []string) ([]models.ValidationResult, error)
 	UpdateReviewStats(foodIDs []primitive.ObjectID, rating *int) error
 }
@@ -67,6 +68,11 @@ func (s *foodService) GetStandardFoodByID(id string) (*models.StandardFood, erro
 }
 
 func (s *foodService) CreateStandardFood(input models.NewStandardFoodInput) (*models.StandardFood, error) {
+	_, err := s.foodRepo.FindStandardFoodByName(input.Name)
+	if err == nil {
+		return nil, errors.New("food already exists")
+	}
+	
 	newFood := &models.StandardFood{
 		ID: primitive.NewObjectID(),
 		Name: input.Name,
@@ -81,7 +87,7 @@ func (s *foodService) CreateStandardFood(input models.NewStandardFoodInput) (*mo
 		AverageRating: 0.0,
 		TrendScore: 0,
 	}
-	err := s.foodRepo.SaveStandardFood(newFood)
+	err = s.foodRepo.SaveStandardFood(newFood)
 	if err != nil {
 		return nil, err
 	}
@@ -127,9 +133,7 @@ func (s *foodService) FindOrCreateCustomFood(input models.NewCustomFoodInput, us
 	return existingFood, nil
 }
 
-func (s *foodService) GetMainFeedFoods(foodType, speed string) ([]*models.StandardFood, error) {
-	foodCount := 10
-
+func (s *foodService) GetMainFeedFoods(foodType, speed string, foodCount int) ([]*models.StandardFood, error) {
 	s.cacheLock.RLock()
 	defer s.cacheLock.RUnlock()
 	

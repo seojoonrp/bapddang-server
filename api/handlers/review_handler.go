@@ -30,7 +30,11 @@ func (h *ReviewHandler) CreateReview (ctx *gin.Context) {
 		return
 	}
 
-	userCtx, _ := ctx.Get("currentUser")
+	userCtx, exists := ctx.Get("currentUser")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
+		return
+	}
 	user := userCtx.(models.User)
 
 	newReview, err := h.reviewService.CreateReview(input, user)
@@ -43,7 +47,11 @@ func (h *ReviewHandler) CreateReview (ctx *gin.Context) {
 }
 
 func (h *ReviewHandler) GetMyReviewsByDay(ctx *gin.Context) {
-	userCtx, _ := ctx.Get("currentUser")
+	userCtx, exists := ctx.Get("currentUser")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
+		return
+	}
 	user := userCtx.(models.User)
 
 	dayStr := ctx.Query("day")

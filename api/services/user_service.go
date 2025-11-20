@@ -3,6 +3,7 @@
 package services
 
 import (
+	"errors"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -30,6 +31,11 @@ func NewUserService(userRepo repositories.UserRepository, foodRepo repositories.
 }
 
 func (s *userService) SignUp(input models.SignUpInput) (*models.User, error) {
+	_, err := s.userRepo.FindByEmail(input.Email)
+	if err == nil {
+		return nil, errors.New("user already exists")
+	}
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
