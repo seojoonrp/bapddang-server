@@ -195,7 +195,7 @@ type matchCandidates struct {
 	Score float64
 	Output models.ValidationOutput
 }
-	
+
 func (s *foodService) ValidateFoods(names []string, userID primitive.ObjectID) ([]models.ValidationResult, error) {
 	results := make([]models.ValidationResult, 0, len(names))
 
@@ -268,8 +268,9 @@ func (s *foodService) ValidateFoods(names []string, userID primitive.ObjectID) (
 
 			// TODO : Lock 걸면서 중복 생성됐는지 이중체크
 			
+			newID := primitive.NewObjectID()
 			newCustomFood := &models.CustomFood{
-				ID: primitive.NewObjectID(),
+				ID: newID,
 				Name: name,
 				UsingUserIDs: []primitive.ObjectID{userID},
 				CreatedAt: time.Now(),
@@ -285,6 +286,7 @@ func (s *foodService) ValidateFoods(names []string, userID primitive.ObjectID) (
 
 			result.Status = "new"
 			result.NewOutput = &models.ValidationOutput{
+				ID: newID,
 				Name: name,
 				Type: "new",
 			}
