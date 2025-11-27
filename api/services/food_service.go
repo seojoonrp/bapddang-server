@@ -131,6 +131,18 @@ func (s *foodService) FindOrCreateCustomFood(input models.NewCustomFoodInput, us
 	if err != nil {
 		return nil, err
 	}
+
+	alreadyExists := false
+	for _, uid := range existingFood.UsingUserIDs {
+		if uid == user.ID {
+			alreadyExists = true
+			break
+		}
+	}
+
+	if !alreadyExists {
+		existingFood.UsingUserIDs = append(existingFood.UsingUserIDs, user.ID)
+	}
 	
 	return existingFood, nil
 }
