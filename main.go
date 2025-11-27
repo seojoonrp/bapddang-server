@@ -21,6 +21,7 @@ func main() {
 
 	db := client.Database(config.AppConfig.DBName)
 	router := gin.Default()
+	router.SetTrustedProxies(nil)
 	routes.SetupRoutes(router, db)
 
 	port := config.AppConfig.Port
