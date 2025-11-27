@@ -25,10 +25,11 @@ type FoodService interface {
 
 	GetMainFeedFoods(foodType, speed string, foodCount int) ([]*models.StandardFood, error)
 	ValidateFoods(names []string, userID primitive.ObjectID) ([]models.ValidationResult, error)
-	UpdateReviewStats(foodIDs []primitive.ObjectID, rating int) error
 
-	UpdateLikeStats(foodID primitive.ObjectID, increment int) error
+	UpdateCreatedReviewStats(foodIDs []primitive.ObjectID, rating int) error
+	UpdateModifiedReviewStats(foodIDs []primitive.ObjectID, oldRating, newRating int) error
 	SyncRatingStatsCache(foodID primitive.ObjectID, oldRating, newRating int) error
+	UpdateLikeStats(foodID primitive.ObjectID, increment int) error
 }
 
 type foodService struct {
@@ -355,8 +356,42 @@ func (s *foodService) ValidateFoods(names []string, userID primitive.ObjectID) (
 	return results, nil
 }
 
-func (s *foodService) UpdateReviewStats(foodIDs []primitive.ObjectID, rating int) error {
-	return s.foodRepo.UpdateReviewStats(foodIDs, rating)
+func (s *foodService) UpdateCreatedReviewStats(foodIDs []primitive.ObjectID, rating int) error {
+	err := s.foodRepo.UpdateCreatedReviewStats(foodIDs, rating)
+	if err != nil {
+		return err
+	}
+
+	s.cacheLock.Lock()
+	defer s.cacheLock.Unlock()
+
+	for _, foodID := range(foodIDs) {
+		err := s.SyncRatingStatsCache(foodID, 0, rating)
+		if err != nil {
+			return err
+		}
+	}
+	
+	return nil
+}
+
+func (s *foodService) UpdateModifiedReviewStats(foodIDs []primitive.ObjectID, oldRating, newRating int) error {
+	err := s.foodRepo.UpdateModifiedReviewStats(foodIDs, oldRating, newRating)
+	if err != nil {
+		return err
+	}
+
+	s.cacheLock.Lock()
+	defer s.cacheLock.Unlock()
+
+	for _, foodID := range(foodIDs) {
+		err := s.SyncRatingStatsCache(foodID, oldRating, newRating)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s *foodService) UpdateLikeStats(foodID primitive.ObjectID, increment int) error {
@@ -387,9 +422,6 @@ func (s *foodService) UpdateLikeStats(foodID primitive.ObjectID, increment int) 
 }
 
 func (s *foodService) SyncRatingStatsCache(foodID primitive.ObjectID, oldRating, newRating int) error {
-	s.cacheLock.Lock()
-	defer s.cacheLock.Unlock()
-
 	for _, food := range s.standardFoodCache {
 		if food.ID == foodID {
 			food.TotalRating = food.TotalRating - oldRating + newRating

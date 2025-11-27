@@ -46,10 +46,14 @@ func (h *ReviewHandler) CreateReview (ctx *gin.Context) {
 		return
 	}
 
+	standardFoods := make([]primitive.ObjectID, 0)
 	for _, foodItem := range newReview.Foods {
 		if foodItem.FoodType == "standard" {
-			h.foodService.SyncRatingStatsCache(foodItem.FoodID, 0, newReview.Rating)
+			standardFoods = append(standardFoods, foodItem.FoodID)
 		}
+	}
+	if len(standardFoods) > 0 {
+		go h.foodService.UpdateCreatedReviewStats(standardFoods, input.Rating)
 	}
 
 	ctx.JSON(http.StatusCreated, newReview)
@@ -82,10 +86,14 @@ func (h *ReviewHandler) UpdateReview (ctx *gin.Context) {
     return
   }
 
+	standardFoods := make([]primitive.ObjectID, 0)
 	for _, foodItem := range updatedReview.Foods {
 		if foodItem.FoodType == "standard" {
-			h.foodService.SyncRatingStatsCache(foodItem.FoodID, oldRating, updatedReview.Rating)
+			standardFoods = append(standardFoods, foodItem.FoodID)
 		}
+	}
+	if len(standardFoods) > 0 && oldRating != input.Rating {
+		go h.foodService.UpdateModifiedReviewStats(standardFoods, oldRating, input.Rating)
 	}
 
 	ctx.JSON(http.StatusOK, updatedReview)

@@ -29,14 +29,6 @@ func NewReviewService(reviewRepo repositories.ReviewRepository, foodRepo reposit
 }
 
 func (s *reviewService) CreateReview(input models.ReviewInput, user models.User) (*models.Review, error) {
-	standardFoodIDs := make([]primitive.ObjectID, 0)
-
-	for _, food := range input.Foods {
-		if food.FoodType == "standard" {
-			standardFoodIDs = append(standardFoodIDs, food.FoodID)
-		}
-	}
-
 	newReview := models.Review {
 		ID: primitive.NewObjectID(),
 		UserID: user.ID,
@@ -56,10 +48,6 @@ func (s *reviewService) CreateReview(input models.ReviewInput, user models.User)
 	err := s.reviewRepo.SaveReview(&newReview)
 	if err != nil {
 		return nil, err
-	}
-
-	if len(standardFoodIDs) > 0 {
-		go s.foodRepo.UpdateReviewStats(standardFoodIDs, input.Rating)
 	}
 
 	return &newReview, nil

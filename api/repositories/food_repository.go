@@ -22,7 +22,8 @@ type FoodRepository interface {
 	SaveStandardFood(food *models.StandardFood) error
 	
 	AddUserToCustomFood(foodID, userID primitive.ObjectID) error
-	UpdateReviewStats(foodID []primitive.ObjectID, rating int) error
+	UpdateCreatedReviewStats(foodID []primitive.ObjectID, rating int) error
+	UpdateModifiedReviewStats(foodID []primitive.ObjectID, oldRating, newRating int) error
 	IncrementLikeCount(foodID primitive.ObjectID) error
 	DecrementLikeCount(foodID primitive.ObjectID) error
 }
@@ -117,17 +118,41 @@ func (r *foodRepository) AddUserToCustomFood(foodID, userID primitive.ObjectID) 
 	return err
 }
 
-func (r *foodRepository) UpdateReviewStats(foodIDs []primitive.ObjectID, rating int) error {
+func (r *foodRepository) UpdateCreatedReviewStats(foodIDs []primitive.ObjectID, rating int) error {
 	if len(foodIDs) == 0 {
+		return nil
+	}
+	if rating <= 0 || rating > 5 {
 		return nil
 	}
 	
 	filter := bson.M{"_id": bson.M{"$in": foodIDs}}
 
 	incMap := bson.M{"reviewCount": 1}
-	if rating >= 1 && rating <= 5 {
-		incMap["ratedReviewCount"] = 1
-		incMap["totalRating"] = rating
+	incMap["totalRating"] = rating
+
+	update := bson.M{"$inc": incMap}
+	_, err := r.standardFoodCollection.UpdateMany(context.TODO(), filter, update)
+	return err
+}
+
+func (r *foodRepository) UpdateModifiedReviewStats(foodIDs []primitive.ObjectID, oldRating, newRating int) error {
+	if len(foodIDs) == 0 {
+		return nil
+	}
+	if newRating <= 0 || newRating > 5 {
+		return nil
+	}
+	
+	filter := bson.M{"_id": bson.M{"$in": foodIDs}}
+
+	ratingDiff := newRating - oldRating
+
+	incMap := bson.M{}
+	if ratingDiff != 0 {
+		incMap["totalRating"] = ratingDiff
+	} else {
+		return nil
 	}
 
 	update := bson.M{"$inc": incMap}
