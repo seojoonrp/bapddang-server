@@ -10,7 +10,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /bapddang-server
 # ----------- RUN STAGE -----------
 
 FROM alpine:latest
-RUN apk --no-cache add ca-certificates
+RUN apk --no-cache add ca-certificates tzdata
+ENV TZ=Asia/Seoul
 WORKDIR /root/
 COPY --from=builder /bapddang-server .
 EXPOSE 8080
