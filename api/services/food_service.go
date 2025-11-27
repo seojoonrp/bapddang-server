@@ -19,6 +19,7 @@ import (
 
 type FoodService interface {
 	GetStandardFoodByID(id string) (*models.StandardFood, error)
+	GetStandardFoodsByIDs(ids []primitive.ObjectID) ([]*models.StandardFood, error)
 	CreateStandardFood(input models.NewStandardFoodInput) (*models.StandardFood, error)
 	FindOrCreateCustomFood(input models.NewCustomFoodInput, user models.User) (*models.CustomFood, error)
 
@@ -67,6 +68,31 @@ func (s *foodService) GetStandardFoodByID(id string) (*models.StandardFood, erro
 	}
 
 	return food, nil
+}
+
+func (s *foodService) GetStandardFoodsByIDs(ids []primitive.ObjectID) ([]*models.StandardFood, error) {
+    s.cacheLock.RLock()
+    defer s.cacheLock.RUnlock()
+
+    results := make([]*models.StandardFood, 0, len(ids))
+
+    foodMap := make(map[primitive.ObjectID]*models.StandardFood)
+    for _, food := range s.standardFoodCache {
+        foodMap[food.ID] = food
+    }
+
+    for _, id := range ids {
+        if food, exists := foodMap[id]; exists {
+            if food.RatedReviewCount > 0 {
+                food.AverageRating = float64(food.TotalRating) / float64(food.RatedReviewCount)
+            } else {
+                food.AverageRating = 0.0
+            }
+            results = append(results, food)
+        }
+    }
+
+    return results, nil
 }
 
 func (s *foodService) CreateStandardFood(input models.NewStandardFoodInput) (*models.StandardFood, error) {

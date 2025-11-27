@@ -13,10 +13,14 @@ import (
 
 type UserHandler struct {
 	userService services.UserService
+	foodService services.FoodService
 }
 
-func NewUserHandler(userService services.UserService) *UserHandler {
-	return &UserHandler{userService: userService}
+func NewUserHandler(userService services.UserService, foodService services.FoodService) *UserHandler {
+	return &UserHandler{
+		userService: userService,
+		foodService: foodService,
+	}
 }
 
 func (h *UserHandler) SignUp(ctx *gin.Context) {
@@ -75,7 +79,11 @@ func (h *UserHandler) LikeFood(ctx *gin.Context) {
 	userID := userCtx.(models.User).ID
 
 	foodIDHex := ctx.Param("foodID")
-	foodID, _ := primitive.ObjectIDFromHex(foodIDHex)
+	foodID, err := primitive.ObjectIDFromHex(foodIDHex)
+	if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid food ID format"})
+			return
+	}
 
 	wasAdded, err := h.userService.LikeFood(userID, foodID)
 	if err != nil {
@@ -99,7 +107,11 @@ func (h *UserHandler) UnlikeFood(ctx *gin.Context) {
 	userID := userCtx.(models.User).ID
 
 	foodIDHex := ctx.Param("foodID")
-	foodID, _ := primitive.ObjectIDFromHex(foodIDHex)
+	foodID, err := primitive.ObjectIDFromHex(foodIDHex)
+	if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid food ID format"})
+			return
+	}
 
 	wasRemoved, err := h.userService.UnlikeFood(userID, foodID)
 	if err != nil {
@@ -123,11 +135,17 @@ func (h *UserHandler) GetLikedFoods(ctx *gin.Context) {
 
 	userID := userCtx.(models.User).ID
 
-	likedFoodIDs, err := h.userService.GetLikedFoods(userID)
+	likedFoodIDs, err := h.userService.GetLikedFoodIDs(userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get liked food ids"})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"likedFoodIDs": likedFoodIDs})
+	foods, err := h.foodService.GetStandardFoodsByIDs(likedFoodIDs)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch liked foods from ids"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"likedFoods": foods})
 }

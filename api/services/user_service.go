@@ -19,7 +19,7 @@ type UserService interface {
 	Login(input models.LoginInput) (string, error)
 	LikeFood(userID, foodID primitive.ObjectID) (bool, error)
 	UnlikeFood(userID, foodID primitive.ObjectID) (bool, error)
-	GetLikedFoods(userID primitive.ObjectID) ([]primitive.ObjectID, error)
+	GetLikedFoodIDs(userID primitive.ObjectID) ([]primitive.ObjectID, error)
 }
 
 type userService struct {
@@ -111,6 +111,6 @@ func (s *userService) UnlikeFood(userID, foodID primitive.ObjectID) (bool, error
 	return wasRemoved, nil
 }
 
-func (s *userService) GetLikedFoods(userID primitive.ObjectID) ([]primitive.ObjectID, error) {
-	return s.userRepo.GetLikedFoods(userID)
+func (s *userService) GetLikedFoodIDs(userID primitive.ObjectID) ([]primitive.ObjectID, error) {
+	return s.userRepo.GetLikedFoodIDs(userID)
 }

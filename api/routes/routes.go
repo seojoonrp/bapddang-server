@@ -23,12 +23,11 @@ func SetupRoutes(router *gin.Engine, db *mongo.Database) {
 	reviewRepository := repositories.NewReviewRepository(reviewCollection)
 
 	userService := services.NewUserService(userRepository, foodRepository)
-	userHandler := handlers.NewUserHandler(userService)
-
 	foodService := services.NewFoodService(foodRepository)
-	foodHandler := handlers.NewFoodHandler(foodService)
-
 	reviewService := services.NewReviewService(reviewRepository, foodRepository)
+
+	userHandler := handlers.NewUserHandler(userService, foodService)
+	foodHandler := handlers.NewFoodHandler(foodService)
 	reviewHandler := handlers.NewReviewHandler(reviewService)
 
 	apiV1 := router.Group("/api/v1")
