@@ -20,6 +20,17 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+var seoulLoc *time.Location
+
+func init() {
+	var err error
+	seoulLoc, err = time.LoadLocation("Asia/Seoul")
+	if err != nil {
+		log.Printf("WARNING: Failed to load Asia/Seoul locatio, using UTC: %v", err)
+		seoulLoc = time.UTC
+	}
+}
+
 func AuthMiddleware(userCollection *mongo.Collection) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		authHeader := ctx.GetHeader("Authorization")
@@ -43,7 +54,6 @@ func AuthMiddleware(userCollection *mongo.Collection) gin.HandlerFunc {
 		})
 
 		if err != nil || !token.Valid {
-			log.Printf("Token parsing error: %v", err) 
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			return
 		}
@@ -58,6 +68,7 @@ func AuthMiddleware(userCollection *mongo.Collection) gin.HandlerFunc {
 			userID, err := primitive.ObjectIDFromHex(userIDHex)
 			if err != nil {
 				ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
+				return
 			}
 
 			var user models.User
@@ -66,10 +77,15 @@ func AuthMiddleware(userCollection *mongo.Collection) gin.HandlerFunc {
 				ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
 				return
 			}
+			
+			calculatedDay := calculateCurrentDay(user.CreatedAt)
 
+			if user.Day < calculatedDay {
+				user.Day = calculatedDay
+				go updateUserDay(user.ID, calculatedDay, userCollection)
+			}
+			
 			ctx.Set("currentUser", user)
-
-			go updateUserDay(user, userCollection)
 
 			ctx.Next()
 		} else {
@@ -78,29 +94,26 @@ func AuthMiddleware(userCollection *mongo.Collection) gin.HandlerFunc {
 	}
 }
 
-func updateUserDay(user models.User, userCollection *mongo.Collection) {
-	loc, err := time.LoadLocation("Asia/Seoul")
+func updateUserDay(userID primitive.ObjectID, newDay int, userCollection *mongo.Collection) {
+  ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+  defer cancel()
 
-	if err != nil {
-		log.Printf("WARNING: Failed to load timezone data")
-		return
-	}
+  filter := bson.M{"_id": userID}
+  update := bson.M{"$set": bson.M{"day": newDay}}
 
-	nowKST := time.Now().In(loc)
-	createdAtKST := user.CreatedAt.In(loc)
-	endDate := time.Date(nowKST.Year(), nowKST.Month(), nowKST.Day(), 0, 0, 0, 0, loc)
-	startDate := time.Date(createdAtKST.Year(), createdAtKST.Month(), createdAtKST.Day(), 0, 0, 0, 0, loc)
-	daysPassed := int(endDate.Sub(startDate).Hours() / 24)
-	curDay := daysPassed + 1
+  _, err := userCollection.UpdateOne(ctx, filter, update)
+  if err != nil {
+    log.Printf("Failed to update user day: %v", err)
+  }
+}
 
-	if user.Day < curDay {
-		user.Day = curDay
+func calculateCurrentDay(createdAt time.Time) int {
+  nowKST := time.Now().In(seoulLoc)
+  createdAtKST := createdAt.In(seoulLoc)
 
-		filter := bson.M{"_id": user.ID}
-		update := bson.M{"$set": bson.M{"day": user.Day}}
-		_, err := userCollection.UpdateOne(context.Background(), filter, update)
-		if err != nil {
-			log.Printf("Failed to update user day: %v", err)
-		}
-	}
+  endDate := time.Date(nowKST.Year(), nowKST.Month(), nowKST.Day(), 0, 0, 0, 0, seoulLoc)
+  startDate := time.Date(createdAtKST.Year(), createdAtKST.Month(), createdAtKST.Day(), 0, 0, 0, 0, seoulLoc)
+  
+  daysPassed := int(endDate.Sub(startDate).Hours() / 24)
+  return daysPassed + 1
 }
