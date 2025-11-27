@@ -26,6 +26,9 @@ type FoodService interface {
 	GetMainFeedFoods(foodType, speed string, foodCount int) ([]*models.StandardFood, error)
 	ValidateFoods(names []string, userID primitive.ObjectID) ([]models.ValidationResult, error)
 	UpdateReviewStats(foodIDs []primitive.ObjectID, rating int) error
+
+	UpdateLikeStats(foodID primitive.ObjectID, increment int) error
+	SyncRatingStatsCache(foodID primitive.ObjectID, oldRating, newRating int) error
 }
 
 type foodService struct {
@@ -45,6 +48,9 @@ func NewFoodService(foodRepo repositories.FoodRepository) FoodService {
 		log.Fatal("FATAL: Failed to load custom food cache: ", err)
 	}
 
+	log.Printf("Successfully loaded %d standard foods into cache", len(allStandardFoods))
+	log.Printf("Successfully loaded %d custom foods into cache", len(allCustomFoods))
+
 	return &foodService{
 		foodRepo: foodRepo,
 		standardFoodCache: allStandardFoods,
@@ -61,8 +67,8 @@ func (s *foodService) GetStandardFoodByID(id string) (*models.StandardFood, erro
 
 	food, _ := s.foodRepo.FindStandardFoodByID(foodID)
 
-	if food.RatedReviewCount > 0 {
-		food.AverageRating = float64(food.TotalRating) / float64(food.RatedReviewCount)
+	if food.ReviewCount > 0 {
+		food.AverageRating = float64(food.TotalRating) / float64(food.ReviewCount)
 	} else {
 		food.AverageRating = 0.0
 	}
@@ -83,8 +89,8 @@ func (s *foodService) GetStandardFoodsByIDs(ids []primitive.ObjectID) ([]*models
 
     for _, id := range ids {
         if food, exists := foodMap[id]; exists {
-            if food.RatedReviewCount > 0 {
-                food.AverageRating = float64(food.TotalRating) / float64(food.RatedReviewCount)
+            if food.ReviewCount > 0 {
+                food.AverageRating = float64(food.TotalRating) / float64(food.ReviewCount)
             } else {
                 food.AverageRating = 0.0
             }
@@ -110,7 +116,6 @@ func (s *foodService) CreateStandardFood(input models.NewStandardFoodInput) (*mo
 		Categories: input.Categories,
 		LikeCount: 0,
 		ReviewCount: 0,
-		RatedReviewCount: 0,
 		TotalRating: 0,
 		AverageRating: 0.0,
 		TrendScore: 0,
@@ -217,8 +222,8 @@ func (s *foodService) GetMainFeedFoods(foodType, speed string, foodCount int) ([
 	}
 
 	for _, food := range resultList {
-		if food.RatedReviewCount > 0 {
-			food.AverageRating = float64(food.TotalRating) / float64(food.RatedReviewCount)
+		if food.ReviewCount > 0 {
+			food.AverageRating = float64(food.TotalRating) / float64(food.ReviewCount)
 		} else {
 			food.AverageRating = 0.0
 		}
@@ -352,4 +357,48 @@ func (s *foodService) ValidateFoods(names []string, userID primitive.ObjectID) (
 
 func (s *foodService) UpdateReviewStats(foodIDs []primitive.ObjectID, rating int) error {
 	return s.foodRepo.UpdateReviewStats(foodIDs, rating)
+}
+
+func (s *foodService) UpdateLikeStats(foodID primitive.ObjectID, increment int) error {
+	var err error
+	if increment > 0 {
+		err = s.foodRepo.IncrementLikeCount(foodID)
+	} else if increment < 0 {
+		err = s.foodRepo.DecrementLikeCount(foodID)
+	}
+	if err != nil {
+		return err
+	}
+
+	s.cacheLock.Lock()
+	defer s.cacheLock.Unlock()
+
+	for _, food := range s.standardFoodCache {
+		if food.ID == foodID {
+			food.LikeCount += increment
+			if food.LikeCount < 0 {
+				food.LikeCount = 0
+			}
+			break
+		}
+	}
+
+	return nil
+}
+
+func (s *foodService) SyncRatingStatsCache(foodID primitive.ObjectID, oldRating, newRating int) error {
+	s.cacheLock.Lock()
+	defer s.cacheLock.Unlock()
+
+	for _, food := range s.standardFoodCache {
+		if food.ID == foodID {
+			food.TotalRating = food.TotalRating - oldRating + newRating
+			if (food.ReviewCount > 0) {
+				food.AverageRating = float64(food.TotalRating) / float64(food.ReviewCount)
+			}
+			break
+		}
+	}
+
+	return nil
 }

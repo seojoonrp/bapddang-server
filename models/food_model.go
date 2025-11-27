@@ -19,7 +19,6 @@ type StandardFood struct {
 
 	LikeCount int `bson:"likeCount" json:"likeCount"`
 	ReviewCount int `bson:"reviewCount" json:"reviewCount"`
-	RatedReviewCount int `bson:"ratedReviewCount" json:"ratedReviewCount"`
 	TotalRating int `bson:"totalRating" json:"totalRating"`
 	AverageRating float64 `bson:"-" json:"averageRating"`
 

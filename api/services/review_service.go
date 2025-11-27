@@ -12,7 +12,7 @@ import (
 
 type ReviewService interface {
 	CreateReview(input models.ReviewInput, user models.User) (*models.Review, error)
-	UpdateReview(reviewID primitive.ObjectID, input models.ReviewInput, user models.User) (*models.Review, error)
+	UpdateReview(reviewID primitive.ObjectID, input models.ReviewInput, user models.User) (*models.Review, int, error)
 	GetMyReviewsByDay(userID primitive.ObjectID, day int) ([]models.Review, error)
 }
 
@@ -65,11 +65,13 @@ func (s *reviewService) CreateReview(input models.ReviewInput, user models.User)
 	return &newReview, nil
 }
 
-func (s *reviewService) UpdateReview(reviewID primitive.ObjectID, input models.ReviewInput, user models.User) (*models.Review, error) {
+func (s *reviewService) UpdateReview(reviewID primitive.ObjectID, input models.ReviewInput, user models.User) (*models.Review, int, error) {
 	existingReview, err := s.reviewRepo.FindByIDAndUserID(reviewID, user.ID)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
+
+	oldRating := existingReview.Rating
 
 	existingReview.MealTime = input.MealTime
 	existingReview.Tags = input.Tags
@@ -80,10 +82,10 @@ func (s *reviewService) UpdateReview(reviewID primitive.ObjectID, input models.R
 
 	err = s.reviewRepo.UpdateReview(existingReview)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-
-	return existingReview, nil
+	
+	return existingReview, oldRating, nil
 }
 
 func (s *reviewService) GetMyReviewsByDay(userID primitive.ObjectID, day int) ([]models.Review, error) {

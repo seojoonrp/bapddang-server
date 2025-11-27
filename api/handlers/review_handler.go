@@ -16,11 +16,13 @@ import (
 
 type ReviewHandler struct {
 	reviewService services.ReviewService
+	foodService services.FoodService
 }
 
-func NewReviewHandler(reviewService services.ReviewService) *ReviewHandler {
+func NewReviewHandler(reviewService services.ReviewService, foodService services.FoodService) *ReviewHandler {
 	return &ReviewHandler{
 		reviewService: reviewService,
+		foodService: foodService,
 	}
 }
 
@@ -44,7 +46,11 @@ func (h *ReviewHandler) CreateReview (ctx *gin.Context) {
 		return
 	}
 
-	// TODO: update food service cache
+	for _, foodItem := range newReview.Foods {
+		if foodItem.FoodType == "standard" {
+			h.foodService.SyncRatingStatsCache(foodItem.FoodID, 0, newReview.Rating)
+		}
+	}
 
 	ctx.JSON(http.StatusCreated, newReview)
 }
@@ -70,13 +76,17 @@ func (h *ReviewHandler) UpdateReview (ctx *gin.Context) {
 		return
 	}
 
-	updatedReview, err := h.reviewService.UpdateReview(reviewID, input, user)
+	updatedReview, oldRating, err := h.reviewService.UpdateReview(reviewID, input, user)
 	if err != nil {
     ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update review"})
     return
   }
 
-	// TODO: update food service cache
+	for _, foodItem := range updatedReview.Foods {
+		if foodItem.FoodType == "standard" {
+			h.foodService.SyncRatingStatsCache(foodItem.FoodID, oldRating, updatedReview.Rating)
+		}
+	}
 
 	ctx.JSON(http.StatusOK, updatedReview)
 }

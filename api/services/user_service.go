@@ -85,13 +85,6 @@ func (s *userService) LikeFood(userID, foodID primitive.ObjectID) (bool, error) 
 		return false, err
 	}
 
-	if wasAdded {
-		err = s.foodRepo.IncrementLikeCount(foodID)
-		if err != nil {
-			return false, err
-		}
-	}
-
 	return wasAdded, nil
 }
 
@@ -99,13 +92,6 @@ func (s *userService) UnlikeFood(userID, foodID primitive.ObjectID) (bool, error
 	wasRemoved, err := s.userRepo.RemoveLikedFood(userID, foodID)
 	if err != nil {
 		return false, err
-	}
-
-	if wasRemoved {
-		err = s.foodRepo.DecrementLikeCount(foodID)
-		if err != nil {
-			return false, err
-		}
 	}
 
 	return wasRemoved, nil
