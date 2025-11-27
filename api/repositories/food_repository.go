@@ -22,7 +22,7 @@ type FoodRepository interface {
 	SaveStandardFood(food *models.StandardFood) error
 	
 	AddUserToCustomFood(foodID, userID primitive.ObjectID) error
-	UpdateReviewStats(foodID []primitive.ObjectID, rating *int) error
+	UpdateReviewStats(foodID []primitive.ObjectID, rating int) error
 	IncrementLikeCount(foodID primitive.ObjectID) error
 	DecrementLikeCount(foodID primitive.ObjectID) error
 }
@@ -117,7 +117,7 @@ func (r *foodRepository) AddUserToCustomFood(foodID, userID primitive.ObjectID) 
 	return err
 }
 
-func (r *foodRepository) UpdateReviewStats(foodIDs []primitive.ObjectID, rating *int) error {
+func (r *foodRepository) UpdateReviewStats(foodIDs []primitive.ObjectID, rating int) error {
 	if len(foodIDs) == 0 {
 		return nil
 	}
@@ -125,9 +125,9 @@ func (r *foodRepository) UpdateReviewStats(foodIDs []primitive.ObjectID, rating 
 	filter := bson.M{"_id": bson.M{"$in": foodIDs}}
 
 	incMap := bson.M{"reviewCount": 1}
-	if rating != nil {
+	if rating >= 1 && rating <= 5 {
 		incMap["ratedReviewCount"] = 1
-		incMap["totalRating"] = *rating
+		incMap["totalRating"] = rating
 	}
 
 	update := bson.M{"$inc": incMap}

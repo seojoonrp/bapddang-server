@@ -25,7 +25,7 @@ type FoodService interface {
 
 	GetMainFeedFoods(foodType, speed string, foodCount int) ([]*models.StandardFood, error)
 	ValidateFoods(names []string, userID primitive.ObjectID) ([]models.ValidationResult, error)
-	UpdateReviewStats(foodIDs []primitive.ObjectID, rating *int) error
+	UpdateReviewStats(foodIDs []primitive.ObjectID, rating int) error
 }
 
 type foodService struct {
@@ -350,6 +350,6 @@ func (s *foodService) ValidateFoods(names []string, userID primitive.ObjectID) (
 	return results, nil
 }
 
-func (s *foodService) UpdateReviewStats(foodIDs []primitive.ObjectID, rating *int) error {
+func (s *foodService) UpdateReviewStats(foodIDs []primitive.ObjectID, rating int) error {
 	return s.foodRepo.UpdateReviewStats(foodIDs, rating)
 }

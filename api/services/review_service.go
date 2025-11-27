@@ -11,7 +11,8 @@ import (
 )
 
 type ReviewService interface {
-	CreateReview(input models.CreateReviewInput, user models.User) (*models.Review, error)
+	CreateReview(input models.ReviewInput, user models.User) (*models.Review, error)
+	UpdateReview(reviewID primitive.ObjectID, input models.ReviewInput, user models.User) (*models.Review, error)
 	GetMyReviewsByDay(userID primitive.ObjectID, day int) ([]models.Review, error)
 }
 
@@ -27,7 +28,7 @@ func NewReviewService(reviewRepo repositories.ReviewRepository, foodRepo reposit
 	}
 }
 
-func (s *reviewService) CreateReview(input models.CreateReviewInput, user models.User) (*models.Review, error) {
+func (s *reviewService) CreateReview(input models.ReviewInput, user models.User) (*models.Review, error) {
 	standardFoodIDs := make([]primitive.ObjectID, 0)
 
 	for _, food := range input.Foods {
@@ -62,6 +63,27 @@ func (s *reviewService) CreateReview(input models.CreateReviewInput, user models
 	}
 
 	return &newReview, nil
+}
+
+func (s *reviewService) UpdateReview(reviewID primitive.ObjectID, input models.ReviewInput, user models.User) (*models.Review, error) {
+	existingReview, err := s.reviewRepo.FindByIDAndUserID(reviewID, user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	existingReview.MealTime = input.MealTime
+	existingReview.Tags = input.Tags
+	existingReview.ImageURL = input.ImageURL
+	existingReview.Comment = input.Comment
+	existingReview.Rating = input.Rating
+	existingReview.UpdatedAt = time.Now()
+
+	err = s.reviewRepo.UpdateReview(existingReview)
+	if err != nil {
+		return nil, err
+	}
+
+	return existingReview, nil
 }
 
 func (s *reviewService) GetMyReviewsByDay(userID primitive.ObjectID, day int) ([]models.Review, error) {

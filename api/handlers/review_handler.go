@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/seojoonrp/bapddang-server/api/services"
 	"github.com/seojoonrp/bapddang-server/models"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type ReviewHandler struct {
@@ -24,9 +25,9 @@ func NewReviewHandler(reviewService services.ReviewService) *ReviewHandler {
 }
 
 func (h *ReviewHandler) CreateReview (ctx *gin.Context) {
-	var input models.CreateReviewInput
+	var input models.ReviewInput
 	if err := ctx.ShouldBindJSON(&input); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid review request format"})
 		return
 	}
 
@@ -43,7 +44,41 @@ func (h *ReviewHandler) CreateReview (ctx *gin.Context) {
 		return
 	}
 
+	// TODO: update food service cache
+
 	ctx.JSON(http.StatusCreated, newReview)
+}
+
+func (h *ReviewHandler) UpdateReview (ctx *gin.Context) {
+	var input models.ReviewInput
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid review request format"})
+		return
+	}
+
+	userCtx, exists := ctx.Get("currentUser")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
+		return
+	}
+	user := userCtx.(models.User)
+
+	reviewIDHex := ctx.Param("reviewID")
+	reviewID, err := primitive.ObjectIDFromHex(reviewIDHex)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid review ID format"})
+		return
+	}
+
+	updatedReview, err := h.reviewService.UpdateReview(reviewID, input, user)
+	if err != nil {
+    ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update review"})
+    return
+  }
+
+	// TODO: update food service cache
+
+	ctx.JSON(http.StatusOK, updatedReview)
 }
 
 func (h *ReviewHandler) GetMyReviewsByDay(ctx *gin.Context) {

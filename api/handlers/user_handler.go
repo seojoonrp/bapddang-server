@@ -96,6 +96,8 @@ func (h *UserHandler) LikeFood(ctx *gin.Context) {
 	} else {
 		ctx.JSON(http.StatusOK, gin.H{"message": "Food is already liked"})
 	}
+
+	// TODO: update food service cache
 }
 
 func (h *UserHandler) UnlikeFood(ctx *gin.Context) {
@@ -124,6 +126,8 @@ func (h *UserHandler) UnlikeFood(ctx *gin.Context) {
 	} else {
 		ctx.JSON(http.StatusOK, gin.H{"message": "Food was not liked"})
 	}
+
+	// TODO: update food service cache
 }
 
 func (h *UserHandler) GetLikedFoods(ctx *gin.Context) {
