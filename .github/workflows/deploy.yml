@@ -19,7 +19,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           script: |
-            cd /bapddang-server
+            cd /home/ubuntu/bapddang-server
 
             git pull origin main
 
