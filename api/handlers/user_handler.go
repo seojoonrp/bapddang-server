@@ -60,6 +60,29 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"token": tokenString})
 }
 
+func (h *UserHandler) GoogleLogin(c *gin.Context) {
+	var input struct {
+		IDToken string `json:"idToken" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	token, user, isNew, err := h.userService.LoginWithGoogle(input.IDToken)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Google login failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"accessToken": token,
+		"user": user,
+		"isNewUser": isNew,
+	})
+}
+
 func (h *UserHandler) GetMe(ctx *gin.Context) {
 	userCtx, exists := ctx.Get("currentUser")
 	if !exists {
