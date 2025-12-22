@@ -83,6 +83,29 @@ func (h *UserHandler) GoogleLogin(c *gin.Context) {
 	})
 }
 
+func (h *UserHandler) KakaoLogin(c *gin.Context) {
+	var input struct {
+		AccessToken string `json:"accessToken" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	token, user, isNew, err := h.userService.LoginWithKakao(input.AccessToken)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Kakao login failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"accessToken": token,
+		"user": user,
+		"isNewUser": isNew,
+	})
+}
+
 func (h *UserHandler) GetMe(ctx *gin.Context) {
 	userCtx, exists := ctx.Get("currentUser")
 	if !exists {
