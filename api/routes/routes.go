@@ -38,6 +38,7 @@ func SetupRoutes(router *gin.Engine, db *mongo.Database) {
 			authRoutes.POST("/login", userHandler.Login)
 			authRoutes.POST("/google", userHandler.GoogleLogin)
 			authRoutes.POST("/kakao", userHandler.KakaoLogin)
+			authRoutes.POST("/apple", userHandler.AppleLogin)
 		}
 
 		protected := apiV1.Group("/")

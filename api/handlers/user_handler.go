@@ -106,6 +106,38 @@ func (h *UserHandler) KakaoLogin(c *gin.Context) {
 	})
 }
 
+func (h *UserHandler) AppleLogin(c *gin.Context) {
+	var input struct {
+		IdentityToken string `json:"identityToken" binding:"required"`
+		FullName struct {
+			GivenName string `json:"givenName"`
+			FamilyName string `json:"familyName"`
+		} `json:"fullName"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	token, user, isNew, err := h.userService.LoginWithApple(
+		input.IdentityToken,
+		input.FullName.GivenName,
+		input.FullName.FamilyName,
+	)
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Apple login failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"accessToken": token,
+		"user": user,
+		"isNewUser": isNew,
+	})
+}
+
 func (h *UserHandler) GetMe(ctx *gin.Context) {
 	userCtx, exists := ctx.Get("currentUser")
 	if !exists {

@@ -20,6 +20,7 @@ type Config struct {
 	JWTSecret string
 
 	GoogleWebClientID string
+	AppleBundleID string
 
 	AWSAccessKeyID string
 	AWSSecretAccessKey string
@@ -44,6 +45,7 @@ func LoadConfig() {
 		JWTSecret: getEnv("JWT_SECRET_KEY", "default_secret"),
 
 		GoogleWebClientID: getEnv("GOOGLE_WEB_CLIENT_ID", ""),
+		AppleBundleID: getEnv("APPLE_BUNDLE_ID", ""),
 
 		AWSAccessKeyID: getEnv("AWS_ACCESS_KEY_ID", ""),
 		AWSSecretAccessKey: getEnv("AWS_SECRET_ACCESS_KEY", ""),
