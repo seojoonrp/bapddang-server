@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 	"net/http"
 	"time"
@@ -202,7 +203,14 @@ func (s *userService) LoginWithKakao(accessToken string) (string, *models.User, 
 }
 
 func (s *userService) verifyAppleToken(identityToken string, clientID string) (jwt.MapClaims, error) {
-	resp, _ := http.Get("https://appleid.apple.com/auth/keys")
+	fmt.Println("Starting apple token verification. ClientID:", clientID)
+
+	resp, err := http.Get("https://appleid.apple.com/auth/keys")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
 	var appleKeys AppleKeys
 	json.NewDecoder(resp.Body).Decode(&appleKeys)
 
@@ -227,6 +235,7 @@ func (s *userService) verifyAppleToken(identityToken string, clientID string) (j
 	})
 
 	if err != nil || !token.Valid {
+		fmt.Println("Token parsing error:", err)
 		return nil, errors.New("invalid Apple identity token")
 	}
 
@@ -238,6 +247,7 @@ func (s *userService) verifyAppleToken(identityToken string, clientID string) (j
 		return nil, errors.New("invalid audience")
 	}
 
+	fmt.Println("Successfully parsed token.")
 	return claims, nil
 }
 
@@ -245,14 +255,21 @@ func (s *userService) LoginWithApple(identityToken string, firstName string, las
 	clientID := config.AppConfig.AppleBundleID
 	claims, err := s.verifyAppleToken(identityToken, clientID)
 	if err != nil {
+		fmt.Println("Error while verifying id token:", err)
 		return "", nil, false, err
 	}
 
-	email := claims["email"].(string)
+	email, ok := claims["email"].(string)
+	if !ok {
+		email = claims["sub"].(string) + "@apple-user.com"
+	}
+	fmt.Println("Apple login for email:", email)
+	
 	userName := firstName + " " + lastName
 	if (userName == " ") {
 		userName = "Apple User"
 	}
+
 
 	isNew := false
 	user, err := s.userRepo.FindByEmail(email)
