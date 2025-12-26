@@ -24,6 +24,8 @@ type User struct {
 	LoginMethod string `bson:"loginMethod" json:"loginMethod"`
 	SocialID string `bson:"socialID,omitempty" json:"-"`
 	IsVerified bool `bson:"isVerified" json:"isVerified"`
+	VerificationToken *string `bson:"verificationToken,omitempty" json:"-"`
+	VerificationExpires *time.Time `bson:"verificationExpires,omitempty" json:"-"`
 
 	Day int `bson:"day" json:"day"`
 	LikedFoodIDs []primitive.ObjectID `bson:"likedFoodIDs" json:"likedFoodIDs"`

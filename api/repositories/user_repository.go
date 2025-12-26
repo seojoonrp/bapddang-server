@@ -14,6 +14,8 @@ import (
 type UserRepository interface {
 	FindByEmail(email string) (*models.User, error)
 	FindBySocialInfo(method, socialID string) (*models.User, error)
+	FindByVerificationToken(token string) (*models.User, error)
+
 	Save(user *models.User) error
 	AddLikedFood(userID, foodID primitive.ObjectID) (bool, error)
 	RemoveLikedFood(userID, foodID primitive.ObjectID) (bool, error)
@@ -30,7 +32,9 @@ func NewUserRepository(coll *mongo.Collection) UserRepository {
 
 func (r *userRepository) FindByEmail(email string) (*models.User, error) {
 	var user models.User
-	err := r.collection.FindOne(context.TODO(), bson.M{"email": email}).Decode(&user)
+	err := r.collection.FindOne(context.TODO(), bson.M{
+		"email": email,
+	}).Decode(&user)
 	if err != nil {
 		return nil, err
 	}
@@ -42,6 +46,17 @@ func (r *userRepository) FindBySocialInfo(method, socialID string) (*models.User
 	err := r.collection.FindOne(context.TODO(), bson.M{
 		"loginMethod": method,
 		"socialID": socialID,
+	}).Decode(&user)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *userRepository) FindByVerificationToken(token string) (*models.User, error) {
+	var user models.User
+	err := r.collection.FindOne(context.TODO(), bson.M{
+		"verificationToken": token,
 	}).Decode(&user)
 	if err != nil {
 		return nil, err
