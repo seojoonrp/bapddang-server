@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   bapddang-server:
-    build: .
+    image: seojoonrp/bapddang-server:latest
     container_name: bapddang-server
     restart: always
     expose:
