@@ -19,8 +19,6 @@ type Config struct {
 
 	JWTSecret string
 
-	ResendAPIKey string
-
 	GoogleWebClientID string
 	AppleBundleID string
 
@@ -45,7 +43,6 @@ func LoadConfig() {
 		DBName: getEnv("DB_NAME", "bapddang-dev"),
 		
 		JWTSecret: getEnv("JWT_SECRET_KEY", "default_secret"),
-		ResendAPIKey: getEnv("RESEND_API_KEY", ""),
 
 		GoogleWebClientID: getEnv("GOOGLE_WEB_CLIENT_ID", ""),
 		AppleBundleID: getEnv("APPLE_BUNDLE_ID", ""),
