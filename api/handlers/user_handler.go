@@ -23,14 +23,14 @@ func NewUserHandler(userService services.UserService, foodService services.FoodS
 	}
 }
 
-func (h *UserHandler) EmailSignUp(ctx *gin.Context) {
+func (h *UserHandler) SignUp(ctx *gin.Context) {
 	var input models.SignUpInput
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	err := h.userService.SignUpWithEmail(input)
+	user, err := h.userService.SignUp(input)
 	if err != nil {
 		if err.Error() == "user already exists" {
 			ctx.JSON(http.StatusConflict, gin.H{"error": "User already exists"})
@@ -41,27 +41,23 @@ func (h *UserHandler) EmailSignUp(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, gin.H{"message": "User created successfully"})
+	ctx.JSON(http.StatusCreated, user)
 }
 
-func (h *UserHandler) EmailLogin(ctx *gin.Context) {
+func (h *UserHandler) Login(ctx *gin.Context) {
 	var input models.LoginInput
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	tokenString, user, err := h.userService.LoginWithEmail(input)
+	tokenString, err := h.userService.Login(input)
 	if err != nil {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"accessToken": tokenString,
-		"user": user,
-		"isNewUser": false,
-	})
+	ctx.JSON(http.StatusOK, gin.H{"token": tokenString})
 }
 
 func (h *UserHandler) GoogleLogin(c *gin.Context) {
