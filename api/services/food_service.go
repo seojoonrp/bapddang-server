@@ -63,15 +63,12 @@ func NewFoodService(foodRepo repositories.FoodRepository) FoodService {
 func (s *foodService) GetStandardFoodByID(id string) (*models.StandardFood, error) {
 	foodID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("Invalid food id")
 	}
 
-	food, _ := s.foodRepo.FindStandardFoodByID(foodID)
-
-	if food.ReviewCount > 0 {
-		food.AverageRating = float64(food.TotalRating) / float64(food.ReviewCount)
-	} else {
-		food.AverageRating = 0.0
+	food, err := s.foodRepo.FindStandardFoodByID(foodID)
+	if err != nil {
+		return nil, err
 	}
 
 	return food, nil
@@ -90,11 +87,6 @@ func (s *foodService) GetStandardFoodsByIDs(ids []primitive.ObjectID) ([]*models
 
 	for _, id := range ids {
 		if food, exists := foodMap[id]; exists {
-			if food.ReviewCount > 0 {
-				food.AverageRating = float64(food.TotalRating) / float64(food.ReviewCount)
-			} else {
-				food.AverageRating = 0.0
-			}
 			results = append(results, food)
 		}
 	}
@@ -109,17 +101,15 @@ func (s *foodService) CreateStandardFood(input models.NewStandardFoodInput) (*mo
 	}
 
 	newFood := &models.StandardFood{
-		ID:            primitive.NewObjectID(),
-		Name:          input.Name,
-		ImageURL:      input.ImageURL,
-		Speed:         input.Speed,
-		Type:          input.Type,
-		Categories:    input.Categories,
-		LikeCount:     0,
-		ReviewCount:   0,
-		TotalRating:   0,
-		AverageRating: 0.0,
-		TrendScore:    0,
+		ID:          primitive.NewObjectID(),
+		Name:        input.Name,
+		ImageURL:    input.ImageURL,
+		Speed:       input.Speed,
+		Type:        input.Type,
+		Categories:  input.Categories,
+		LikeCount:   0,
+		ReviewCount: 0,
+		TotalRating: 0,
 	}
 	err = s.foodRepo.SaveStandardFood(newFood)
 	if err != nil {
@@ -222,15 +212,7 @@ func (s *foodService) GetMainFeedFoods(foodType, speed string, foodCount int) ([
 		}
 	}
 
-	for _, food := range resultList {
-		if food.ReviewCount > 0 {
-			food.AverageRating = float64(food.TotalRating) / float64(food.ReviewCount)
-		} else {
-			food.AverageRating = 0.0
-		}
-	}
-
-	log.Printf("Selected %d foods: %+v", len(resultList), resultList)
+	log.Printf("Selected %d main feed foods", len(resultList))
 
 	return resultList, nil
 }
@@ -425,9 +407,6 @@ func (s *foodService) SyncRatingStatsCache(foodID primitive.ObjectID, oldRating,
 	for _, food := range s.standardFoodCache {
 		if food.ID == foodID {
 			food.TotalRating = food.TotalRating - oldRating + newRating
-			if food.ReviewCount > 0 {
-				food.AverageRating = float64(food.TotalRating) / float64(food.ReviewCount)
-			}
 			break
 		}
 	}

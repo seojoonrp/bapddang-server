@@ -53,7 +53,7 @@ func (r *userRepository) Save(user *models.User) error {
 
 func (r *userRepository) AddLikedFood(userID, foodID primitive.ObjectID) (bool, error) {
 	filter := bson.M{"_id": userID}
-	update := bson.M{"$addToSet": bson.M{"likedFoodIDs": foodID}}
+	update := bson.M{"$addToSet": bson.M{"liked_food_ids": foodID}}
 
 	result, err := r.collection.UpdateOne(context.TODO(), filter, update)
 	if err != nil {
@@ -64,7 +64,7 @@ func (r *userRepository) AddLikedFood(userID, foodID primitive.ObjectID) (bool, 
 
 func (r *userRepository) RemoveLikedFood(userID, foodID primitive.ObjectID) (bool, error) {
 	filter := bson.M{"_id": userID}
-	update := bson.M{"$pull": bson.M{"likedFoodIDs": foodID}}
+	update := bson.M{"$pull": bson.M{"liked_food_ids": foodID}}
 
 	result, err := r.collection.UpdateOne(context.TODO(), filter, update)
 	if err != nil {

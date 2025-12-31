@@ -13,7 +13,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/seojoonrp/bapddang-server/api/repositories"
 	"github.com/seojoonrp/bapddang-server/config"
 	"github.com/seojoonrp/bapddang-server/models"

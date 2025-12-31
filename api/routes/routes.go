@@ -15,8 +15,8 @@ func SetupRoutes(router *gin.Engine, db *mongo.Database) {
 	userCollection := db.Collection("users")
 	userRepository := repositories.NewUserRepository(userCollection)
 
-	standardFoodCollection := db.Collection("standard-foods")
-	customFoodCollection := db.Collection("custom-foods")
+	standardFoodCollection := db.Collection("standard_foods")
+	customFoodCollection := db.Collection("custom_foods")
 	foodRepository := repositories.NewFoodRepository(standardFoodCollection, customFoodCollection)
 
 	reviewCollection := db.Collection("reviews")

@@ -17,12 +17,9 @@ type StandardFood struct {
 	Type       string   `bson:"type" json:"type" binding:"required"`
 	Categories []string `bson:"categories" json:"categories"`
 
-	LikeCount     int     `bson:"like_count" json:"likeCount"`
-	ReviewCount   int     `bson:"review_count" json:"reviewCount"`
-	TotalRating   int     `bson:"total_rating" json:"totalRating"`
-	AverageRating float64 `bson:"-" json:"averageRating"`
-
-	TrendScore int `bson:"trend_score" json:"trendScore"`
+	LikeCount   int `bson:"like_count" json:"likeCount"`
+	ReviewCount int `bson:"review_count" json:"reviewCount"`
+	TotalRating int `bson:"total_rating" json:"totalRating"`
 }
 
 type NewStandardFoodInput struct {
