@@ -40,10 +40,10 @@ type AppleKeys struct {
 type UserService interface {
 	CheckUsernameExists(username string) (bool, error)
 	SignUp(input models.SignUpInput) (*models.User, error)
-	Login(input models.LoginInput) (string, error)
-	LoginWithGoogle(idToken string) (bool, string, error)
-	LoginWithKakao(accessToken string) (bool, string, error)
-	LoginWithApple(identityToken string) (bool, string, error)
+	Login(input models.LoginInput) (string, *models.User, error)
+	LoginWithGoogle(idToken string) (bool, string, *models.User, error)
+	LoginWithKakao(accessToken string) (bool, string, *models.User, error)
+	LoginWithApple(identityToken string) (bool, string, *models.User, error)
 
 	LikeFood(userID, foodID primitive.ObjectID) (bool, error)
 	UnlikeFood(userID, foodID primitive.ObjectID) (bool, error)
@@ -107,27 +107,32 @@ func (s *userService) SignUp(input models.SignUpInput) (*models.User, error) {
 	return newUser, nil
 }
 
-func (s *userService) Login(input models.LoginInput) (string, error) {
+func (s *userService) Login(input models.LoginInput) (string, *models.User, error) {
 	user, err := s.userRepo.FindByUsername(input.Username)
 	if err != nil {
-		return "", err // Invalid username
+		return "", nil, err // Invalid username
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password))
 	if err != nil {
-		return "", err // Invalid password
+		return "", nil, err // Invalid password
 	}
 
-	return utils.GenerateToken(user.ID.Hex())
+	token, err := utils.GenerateToken(user.ID.Hex())
+	if err != nil {
+		return "", nil, err
+	}
+
+	return token, user, nil
 }
 
-func (s *userService) loginWithSocial(provider string, socialID string, email string) (bool, string, error) {
+func (s *userService) loginWithSocial(provider string, socialID string, email string) (bool, string, *models.User, error) {
 	targetUsername := utils.GenerateHashUsername(provider, socialID)
 	isNew := false
 
 	user, err := s.userRepo.FindByUsername(targetUsername)
 	if err != nil {
-		return false, "", err
+		return false, "", nil, err
 	}
 
 	if user == nil {
@@ -146,20 +151,20 @@ func (s *userService) loginWithSocial(provider string, socialID string, email st
 		}
 
 		if err := s.userRepo.Save(user); err != nil {
-			return false, "", err
+			return false, "", nil, err
 		}
 	}
 
 	signedToken, err := utils.GenerateToken(user.ID.Hex())
-	return isNew, signedToken, err
+	return isNew, signedToken, user, err
 }
 
-func (s *userService) LoginWithGoogle(idToken string) (bool, string, error) {
+func (s *userService) LoginWithGoogle(idToken string) (bool, string, *models.User, error) {
 	webClientID := config.AppConfig.GoogleWebClientID
 
 	payload, err := idtoken.Validate(context.Background(), idToken, webClientID)
 	if err != nil {
-		return false, "", errors.New("invalid Google ID token")
+		return false, "", nil, errors.New("invalid Google ID token")
 	}
 
 	socialID := payload.Subject
@@ -168,14 +173,14 @@ func (s *userService) LoginWithGoogle(idToken string) (bool, string, error) {
 	return s.loginWithSocial(models.LoginMethodGoogle, socialID, email)
 }
 
-func (s *userService) LoginWithKakao(accessToken string) (bool, string, error) {
+func (s *userService) LoginWithKakao(accessToken string) (bool, string, *models.User, error) {
 	client := &http.Client{}
 	req, _ := http.NewRequest("GET", "https://kapi.kakao.com/v2/user/me", nil)
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 
 	resp, err := client.Do(req)
 	if err != nil || resp.StatusCode != http.StatusOK {
-		return false, "", errors.New("invalid Kakao access token")
+		return false, "", nil, errors.New("invalid Kakao access token")
 	}
 	defer resp.Body.Close()
 
@@ -189,7 +194,7 @@ func (s *userService) LoginWithKakao(accessToken string) (bool, string, error) {
 		} `json:"kakao_account"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&kakaoRes); err != nil {
-		return false, "", errors.New("failed to decode Kakao response")
+		return false, "", nil, errors.New("failed to decode Kakao response")
 	}
 
 	socialID := strconv.FormatInt(kakaoRes.ID, 10)
@@ -244,12 +249,12 @@ func (s *userService) verifyAppleToken(identityToken string, clientID string) (j
 	return claims, nil
 }
 
-func (s *userService) LoginWithApple(identityToken string) (bool, string, error) {
+func (s *userService) LoginWithApple(identityToken string) (bool, string, *models.User, error) {
 	clientID := config.AppConfig.AppleBundleID
 	claims, err := s.verifyAppleToken(identityToken, clientID)
 	if err != nil {
 		fmt.Println("Error while verifying id token:", err)
-		return false, "", err
+		return false, "", nil, err
 	}
 
 	socialID, _ := claims["sub"].(string)

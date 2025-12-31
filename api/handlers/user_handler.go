@@ -67,13 +67,17 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 		return
 	}
 
-	tokenString, err := h.userService.Login(input)
+	token, user, err := h.userService.Login(input)
 	if err != nil {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"token": tokenString})
+	ctx.JSON(http.StatusOK, gin.H{
+		"accessToken": token,
+		"user":        user,
+		"isNewUser":   false,
+	})
 }
 
 func (h *UserHandler) GoogleLogin(c *gin.Context) {
@@ -86,7 +90,7 @@ func (h *UserHandler) GoogleLogin(c *gin.Context) {
 		return
 	}
 
-	isNew, token, err := h.userService.LoginWithGoogle(input.IDToken)
+	isNew, token, user, err := h.userService.LoginWithGoogle(input.IDToken)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Google login failed"})
 		return
@@ -94,6 +98,7 @@ func (h *UserHandler) GoogleLogin(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"accessToken": token,
+		"user":        user,
 		"isNewUser":   isNew,
 	})
 }
@@ -108,7 +113,7 @@ func (h *UserHandler) KakaoLogin(c *gin.Context) {
 		return
 	}
 
-	isNew, token, err := h.userService.LoginWithKakao(input.AccessToken)
+	isNew, token, user, err := h.userService.LoginWithKakao(input.AccessToken)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Kakao login failed"})
 		return
@@ -116,6 +121,7 @@ func (h *UserHandler) KakaoLogin(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"accessToken": token,
+		"user":        user,
 		"isNewUser":   isNew,
 	})
 }
@@ -134,7 +140,7 @@ func (h *UserHandler) AppleLogin(c *gin.Context) {
 		return
 	}
 
-	isNew, token, err := h.userService.LoginWithApple(input.IdentityToken)
+	isNew, token, user, err := h.userService.LoginWithApple(input.IdentityToken)
 
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Apple login failed"})
@@ -143,6 +149,7 @@ func (h *UserHandler) AppleLogin(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"accessToken": token,
+		"user":        user,
 		"isNewUser":   isNew,
 	})
 }
