@@ -70,7 +70,7 @@ func (h *UserHandler) GoogleLogin(c *gin.Context) {
 		return
 	}
 
-	token, user, isNew, err := h.userService.LoginWithGoogle(input.IDToken)
+	isNew, token, err := h.userService.LoginWithGoogle(input.IDToken)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Google login failed"})
 		return
@@ -78,8 +78,7 @@ func (h *UserHandler) GoogleLogin(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"accessToken": token,
-		"user": user,
-		"isNewUser": isNew,
+		"isNewUser":   isNew,
 	})
 }
 
@@ -93,7 +92,7 @@ func (h *UserHandler) KakaoLogin(c *gin.Context) {
 		return
 	}
 
-	token, user, isNew, err := h.userService.LoginWithKakao(input.AccessToken)
+	isNew, token, err := h.userService.LoginWithKakao(input.AccessToken)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Kakao login failed"})
 		return
@@ -101,16 +100,15 @@ func (h *UserHandler) KakaoLogin(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"accessToken": token,
-		"user": user,
-		"isNewUser": isNew,
+		"isNewUser":   isNew,
 	})
 }
 
 func (h *UserHandler) AppleLogin(c *gin.Context) {
 	var input struct {
 		IdentityToken string `json:"identityToken" binding:"required"`
-		FullName struct {
-			GivenName string `json:"givenName"`
+		FullName      struct {
+			GivenName  string `json:"givenName"`
 			FamilyName string `json:"familyName"`
 		} `json:"fullName"`
 	}
@@ -120,7 +118,7 @@ func (h *UserHandler) AppleLogin(c *gin.Context) {
 		return
 	}
 
-	token, user, isNew, err := h.userService.LoginWithApple(
+	isNew, token, err := h.userService.LoginWithApple(
 		input.IdentityToken,
 		input.FullName.GivenName,
 		input.FullName.FamilyName,
@@ -133,8 +131,7 @@ func (h *UserHandler) AppleLogin(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"accessToken": token,
-		"user": user,
-		"isNewUser": isNew,
+		"isNewUser":   isNew,
 	})
 }
 
@@ -159,8 +156,8 @@ func (h *UserHandler) LikeFood(ctx *gin.Context) {
 	foodIDHex := ctx.Param("foodID")
 	foodID, err := primitive.ObjectIDFromHex(foodIDHex)
 	if err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid food ID format"})
-			return
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid food ID format"})
+		return
 	}
 
 	wasAdded, err := h.userService.LikeFood(userID, foodID)
@@ -189,8 +186,8 @@ func (h *UserHandler) UnlikeFood(ctx *gin.Context) {
 	foodIDHex := ctx.Param("foodID")
 	foodID, err := primitive.ObjectIDFromHex(foodIDHex)
 	if err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid food ID format"})
-			return
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid food ID format"})
+		return
 	}
 
 	wasRemoved, err := h.userService.UnlikeFood(userID, foodID)

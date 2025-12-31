@@ -15,17 +15,17 @@ type Config struct {
 	Port string
 
 	MongoURI string
-	DBName string
+	DBName   string
 
 	JWTSecret string
 
 	GoogleWebClientID string
-	AppleBundleID string
+	AppleBundleID     string
 
-	AWSAccessKeyID string
+	AWSAccessKeyID     string
 	AWSSecretAccessKey string
-	AWSS3BucketName string
-	AWSRegion string
+	AWSS3BucketName    string
+	AWSRegion          string
 }
 
 var AppConfig *Config
@@ -40,17 +40,17 @@ func LoadConfig() {
 		Port: getEnv("PORT", "8080"),
 
 		MongoURI: getEnv("MONGO_URI", "mongodb://localhost:27017"),
-		DBName: getEnv("DB_NAME", "bapddang-dev"),
-		
+		DBName:   getEnv("DB_NAME", "bapddang-dev"),
+
 		JWTSecret: getEnv("JWT_SECRET_KEY", "default_secret"),
 
 		GoogleWebClientID: getEnv("GOOGLE_WEB_CLIENT_ID", ""),
-		AppleBundleID: getEnv("APPLE_BUNDLE_ID", ""),
+		AppleBundleID:     getEnv("APPLE_BUNDLE_ID", ""),
 
-		AWSAccessKeyID: getEnv("AWS_ACCESS_KEY_ID", ""),
+		AWSAccessKeyID:     getEnv("AWS_ACCESS_KEY_ID", ""),
 		AWSSecretAccessKey: getEnv("AWS_SECRET_ACCESS_KEY", ""),
-		AWSS3BucketName: getEnv("AWS_S3_BUCKET_NAME", ""),
-		AWSRegion: getEnv("AWS_REGION", ""),
+		AWSS3BucketName:    getEnv("AWS_S3_BUCKET_NAME", ""),
+		AWSRegion:          getEnv("AWS_REGION", ""),
 	}
 }
 

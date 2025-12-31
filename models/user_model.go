@@ -9,30 +9,29 @@ import (
 )
 
 const (
-	LoginMethodEmail = "email"
+	LoginMethodEmail  = "email"
 	LoginMethodGoogle = "google"
-	LoginMethodKakao = "kakao"
-	LoginMethodApple = "apple"
+	LoginMethodKakao  = "kakao"
+	LoginMethodApple  = "apple"
 )
 
 type User struct {
-	ID primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	UserName string `bson:"userName" json:"userName" binding:"required"`
-	Email string `bson:"email" json:"email" binding:"required"`
-	Password string `bson:"password" json:"-"`
-	LoginMethod string `bson:"loginMethod" json:"loginMethod"`
-	Day int `bson:"day" json:"day"`
-	LikedFoodIDs []primitive.ObjectID `bson:"likedFoodIDs" json:"likedFoodIDs"`
-	CreatedAt time.Time `bson:"createdAt" json:"createdAt"`
+	ID           primitive.ObjectID   `bson:"_id,omitempty" json:"id"`
+	Username     string               `bson:"username" json:"username"`
+	Password     string               `bson:"password,omitempty" json:"-"`
+	Email        string               `bson:"email,omitempty" json:"email"`
+	LoginMethod  string               `bson:"login_method" json:"loginMethod"`
+	Day          int                  `bson:"day" json:"day"`
+	LikedFoodIDs []primitive.ObjectID `bson:"liked_food_ids" json:"likedFoodIDs"`
+	CreatedAt    time.Time            `bson:"created_at" json:"createdAt"`
 }
 
 type SignUpInput struct {
-	Email string `json:"email" binding:"required,email"`
+	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
-	UserName string `json:"userName" binding:"required"`
 }
 
 type LoginInput struct {
-	Email string `json:"email" binding:"required,email"`
+	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }

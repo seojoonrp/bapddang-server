@@ -17,6 +17,7 @@ import (
 	"github.com/seojoonrp/bapddang-server/api/repositories"
 	"github.com/seojoonrp/bapddang-server/config"
 	"github.com/seojoonrp/bapddang-server/models"
+	"github.com/seojoonrp/bapddang-server/utils"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/api/idtoken"
@@ -27,8 +28,8 @@ type AppleKey struct {
 	Kid string `json:"kid"`
 	Use string `json:"use"`
 	Alg string `json:"alg"`
-	N string `json:"n"`
-	E string `json:"e"`
+	N   string `json:"n"`
+	E   string `json:"e"`
 }
 
 type AppleKeys struct {
@@ -38,9 +39,9 @@ type AppleKeys struct {
 type UserService interface {
 	SignUp(input models.SignUpInput) (*models.User, error)
 	Login(input models.LoginInput) (string, error)
-	LoginWithGoogle(idToken string) (string, *models.User, bool, error)
-	LoginWithKakao(accessToken string) (string, *models.User, bool, error)
-	LoginWithApple(identityToken string, firstName string, lastName string) (string, *models.User, bool, error)
+	LoginWithGoogle(idToken string) (bool, string, error)
+	LoginWithKakao(accessToken string) (bool, string, error)
+	LoginWithApple(identityToken string, firstName string, lastName string) (bool, string, error)
 
 	LikeFood(userID, foodID primitive.ObjectID) (bool, error)
 	UnlikeFood(userID, foodID primitive.ObjectID) (bool, error)
@@ -57,7 +58,7 @@ func NewUserService(userRepo repositories.UserRepository, foodRepo repositories.
 }
 
 func (s *userService) SignUp(input models.SignUpInput) (*models.User, error) {
-	_, err := s.userRepo.FindByEmail(input.Email)
+	_, err := s.userRepo.FindByUsername(input.Username)
 	if err == nil {
 		return nil, errors.New("user already exists")
 	}
@@ -69,8 +70,7 @@ func (s *userService) SignUp(input models.SignUpInput) (*models.User, error) {
 
 	newUser := &models.User{
 		ID:           primitive.NewObjectID(),
-		UserName:     input.UserName,
-		Email:        input.Email,
+		Username:     input.Username,
 		Password:     string(hashedPassword),
 		LoginMethod:  models.LoginMethodEmail,
 		Day:          1,
@@ -87,9 +87,9 @@ func (s *userService) SignUp(input models.SignUpInput) (*models.User, error) {
 }
 
 func (s *userService) Login(input models.LoginInput) (string, error) {
-	user, err := s.userRepo.FindByEmail(input.Email)
+	user, err := s.userRepo.FindByUsername(input.Username)
 	if err != nil {
-		return "", err // Invalid email
+		return "", err // Invalid username
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password))
@@ -97,21 +97,15 @@ func (s *userService) Login(input models.LoginInput) (string, error) {
 		return "", err // Invalid password
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": user.ID.Hex(),
-		"exp": time.Now().Add(time.Hour * 24 * 7).Unix(),
-	})
-
-	signedToken, err := token.SignedString([]byte(config.AppConfig.JWTSecret))
-	return signedToken, err
+	return utils.GenerateToken(user.ID.Hex())
 }
 
-func (s *userService) LoginWithGoogle(idToken string) (string, *models.User, bool, error) {
+func (s *userService) LoginWithGoogle(idToken string) (bool, string, error) {
 	webClientID := config.AppConfig.GoogleWebClientID
 
 	payload, err := idtoken.Validate(context.Background(), idToken, webClientID)
 	if err != nil {
-		return "", nil, false, errors.New("invalid Google ID token")
+		return false, "", errors.New("invalid Google ID token")
 	}
 
 	email := payload.Claims["email"].(string)
@@ -122,52 +116,47 @@ func (s *userService) LoginWithGoogle(idToken string) (string, *models.User, boo
 	if err != nil {
 		isNew = true
 		user = &models.User{
-			ID: primitive.NewObjectID(),
-			UserName: userName,
-			Email:  email,
-			Password: "",
-			LoginMethod: models.LoginMethodGoogle,
-			Day: 1,
+			ID:           primitive.NewObjectID(),
+			Username:     userName,
+			Email:        email,
+			Password:     "",
+			LoginMethod:  models.LoginMethodGoogle,
+			Day:          1,
 			LikedFoodIDs: make([]primitive.ObjectID, 0),
-			CreatedAt: time.Now(),
+			CreatedAt:    time.Now(),
 		}
 
 		if err := s.userRepo.Save(user); err != nil {
-			return "", nil, false, err
+			return false, "", err
 		}
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": user.ID.Hex(),
-		"exp": time.Now().Add(time.Hour * 24 * 7).Unix(),
-	})
-
-	signedToken, err := token.SignedString([]byte(config.AppConfig.JWTSecret))
-	return signedToken, user, isNew, err
+	signedToken, err := utils.GenerateToken(user.ID.Hex())
+	return isNew, signedToken, err
 }
 
-func (s *userService) LoginWithKakao(accessToken string) (string, *models.User, bool, error) {
+func (s *userService) LoginWithKakao(accessToken string) (bool, string, error) {
 	client := &http.Client{}
 	req, _ := http.NewRequest("GET", "https://kapi.kakao.com/v2/user/me", nil)
-	req.Header.Set("Authorization", "Bearer " + accessToken)
+	req.Header.Set("Authorization", "Bearer "+accessToken)
 
 	resp, err := client.Do(req)
-	if (err != nil || resp.StatusCode != http.StatusOK) {
-		return "", nil, false, errors.New("invalid Kakao access token")
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return false, "", errors.New("invalid Kakao access token")
 	}
 	defer resp.Body.Close()
 
 	var kakaoRes struct {
-		ID int64 `json:"id"`
+		ID           int64 `json:"id"`
 		KakaoAccount struct {
-			Email string `json:"email"`
+			Email   string `json:"email"`
 			Profile struct {
 				Nickname string `json:"nickname"`
 			} `json:"profile"`
 		} `json:"kakao_account"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&kakaoRes); err != nil {
-		return "", nil, false, errors.New("failed to decode Kakao response")
+		return false, "", errors.New("failed to decode Kakao response")
 	}
 
 	email := kakaoRes.KakaoAccount.Email
@@ -178,28 +167,23 @@ func (s *userService) LoginWithKakao(accessToken string) (string, *models.User, 
 	if err != nil {
 		isNew = true
 		user = &models.User{
-			ID: primitive.NewObjectID(),
-			UserName: kakaoRes.KakaoAccount.Profile.Nickname,
-			Email: email,
-			Password: "",
-			LoginMethod: models.LoginMethodKakao,
-			Day: 1,
+			ID:           primitive.NewObjectID(),
+			Username:     kakaoRes.KakaoAccount.Profile.Nickname,
+			Email:        email,
+			Password:     "",
+			LoginMethod:  models.LoginMethodKakao,
+			Day:          1,
 			LikedFoodIDs: make([]primitive.ObjectID, 0),
-			CreatedAt: time.Now(),
+			CreatedAt:    time.Now(),
 		}
 
 		if err := s.userRepo.Save(user); err != nil {
-			return "", nil, false, err
+			return false, "", err
 		}
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": user.ID.Hex(),
-		"exp": time.Now().Add(time.Hour * 24 * 7).Unix(),
-	})
-
-	signedToken, err := token.SignedString([]byte(config.AppConfig.JWTSecret))
-	return signedToken, user, isNew, err
+	signedToken, err := utils.GenerateToken(user.ID.Hex())
+	return isNew, signedToken, err
 }
 
 func (s *userService) verifyAppleToken(identityToken string, clientID string) (jwt.MapClaims, error) {
@@ -251,12 +235,12 @@ func (s *userService) verifyAppleToken(identityToken string, clientID string) (j
 	return claims, nil
 }
 
-func (s *userService) LoginWithApple(identityToken string, firstName string, lastName string) (string, *models.User, bool, error) {
+func (s *userService) LoginWithApple(identityToken string, firstName string, lastName string) (bool, string, error) {
 	clientID := config.AppConfig.AppleBundleID
 	claims, err := s.verifyAppleToken(identityToken, clientID)
 	if err != nil {
 		fmt.Println("Error while verifying id token:", err)
-		return "", nil, false, err
+		return false, "", err
 	}
 
 	email, ok := claims["email"].(string)
@@ -264,12 +248,11 @@ func (s *userService) LoginWithApple(identityToken string, firstName string, las
 		email = claims["sub"].(string) + "@apple-user.com"
 	}
 	fmt.Println("Apple login for email:", email)
-	
+
 	userName := firstName + " " + lastName
-	if (userName == " ") {
+	if userName == " " {
 		userName = "Apple User"
 	}
-
 
 	isNew := false
 	user, err := s.userRepo.FindByEmail(email)
@@ -278,7 +261,7 @@ func (s *userService) LoginWithApple(identityToken string, firstName string, las
 		isNew = true
 		user = &models.User{
 			ID:           primitive.NewObjectID(),
-			UserName:     userName,
+			Username:     userName,
 			Email:        email,
 			Password:     "",
 			LoginMethod:  models.LoginMethodApple,
@@ -288,17 +271,12 @@ func (s *userService) LoginWithApple(identityToken string, firstName string, las
 		}
 
 		if err := s.userRepo.Save(user); err != nil {
-			return "", nil, false, err
+			return false, "", err
 		}
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": user.ID.Hex(),
-		"exp": time.Now().Add(time.Hour * 24 * 7).Unix(),
-	})
-
-	signedToken, err := token.SignedString([]byte(config.AppConfig.JWTSecret))
-	return signedToken, user, isNew, err
+	signedToken, err := utils.GenerateToken(user.ID.Hex())
+	return isNew, signedToken, err
 }
 
 func (s *userService) LikeFood(userID, foodID primitive.ObjectID) (bool, error) {

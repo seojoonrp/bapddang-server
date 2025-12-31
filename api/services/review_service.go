@@ -18,29 +18,29 @@ type ReviewService interface {
 
 type reviewService struct {
 	reviewRepo repositories.ReviewRepository
-	foodRepo repositories.FoodRepository
+	foodRepo   repositories.FoodRepository
 }
 
 func NewReviewService(reviewRepo repositories.ReviewRepository, foodRepo repositories.FoodRepository) ReviewService {
 	return &reviewService{
 		reviewRepo: reviewRepo,
-		foodRepo: foodRepo,
+		foodRepo:   foodRepo,
 	}
 }
 
 func (s *reviewService) CreateReview(input models.ReviewInput, user models.User) (*models.Review, error) {
-	newReview := models.Review {
-		ID: primitive.NewObjectID(),
-		UserID: user.ID,
-		Name: input.Name,
-		Foods: input.Foods,
-		Speed: input.Speed,
-		MealTime: input.MealTime,
-		Tags: input.Tags,
-		ImageURL: input.ImageURL,
-		Comment: input.Comment,
-		Rating: input.Rating,
-		Day: user.Day,
+	newReview := models.Review{
+		ID:        primitive.NewObjectID(),
+		UserID:    user.ID,
+		Name:      input.Name,
+		Foods:     input.Foods,
+		Speed:     input.Speed,
+		MealTime:  input.MealTime,
+		Tags:      input.Tags,
+		ImageURL:  input.ImageURL,
+		Comment:   input.Comment,
+		Rating:    input.Rating,
+		Day:       user.Day,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -72,7 +72,7 @@ func (s *reviewService) UpdateReview(reviewID primitive.ObjectID, input models.R
 	if err != nil {
 		return nil, 0, err
 	}
-	
+
 	return existingReview, oldRating, nil
 }
 

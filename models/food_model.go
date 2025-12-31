@@ -9,35 +9,35 @@ import (
 )
 
 type StandardFood struct {
-	ID primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	Name string `bson:"name" json:"name" binding:"required"`
-	ImageURL string `bson:"imageURL" json:"imageURL" binding:"required"`
+	ID       primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	Name     string             `bson:"name" json:"name" binding:"required"`
+	ImageURL string             `bson:"image_url" json:"imageURL" binding:"required"`
 
-	Speed string `bson:"speed" json:"speed" binding:"required"`
-	Type string `bson:"type" json:"type" binding:"required"`
+	Speed      string   `bson:"speed" json:"speed" binding:"required"`
+	Type       string   `bson:"type" json:"type" binding:"required"`
 	Categories []string `bson:"categories" json:"categories"`
 
-	LikeCount int `bson:"likeCount" json:"likeCount"`
-	ReviewCount int `bson:"reviewCount" json:"reviewCount"`
-	TotalRating int `bson:"totalRating" json:"totalRating"`
+	LikeCount     int     `bson:"like_count" json:"likeCount"`
+	ReviewCount   int     `bson:"review_count" json:"reviewCount"`
+	TotalRating   int     `bson:"total_rating" json:"totalRating"`
 	AverageRating float64 `bson:"-" json:"averageRating"`
 
-	TrendScore int `bson:"trendScore" json:"trendScore"`
+	TrendScore int `bson:"trend_score" json:"trendScore"`
 }
 
 type NewStandardFoodInput struct {
-	Name string `json:"name"`
-	ImageURL string `json:"imageURL"`
-	Speed string `json:"speed"`
-	Type string `json:"type"`
+	Name       string   `json:"name"`
+	ImageURL   string   `json:"imageURL"`
+	Speed      string   `json:"speed"`
+	Type       string   `json:"type"`
 	Categories []string `json:"categories"`
 }
 
 type CustomFood struct {
-	ID primitive.ObjectID `bson:"_id, omitempty" json:"id"`
-	Name string `bson:"name" json:"name" binding:"required"`
-	UsingUserIDs []primitive.ObjectID `bson:"usingUserIDs" json:"usingUserIDs" binding:"required"`
-	CreatedAt time.Time `bson:"createdAt" json:"createdAt"`
+	ID           primitive.ObjectID   `bson:"_id, omitempty" json:"id"`
+	Name         string               `bson:"name" json:"name" binding:"required"`
+	UsingUserIDs []primitive.ObjectID `bson:"using_user_ids" json:"usingUserIDs" binding:"required"`
+	CreatedAt    time.Time            `bson:"created_at" json:"createdAt"`
 }
 
 type NewCustomFoodInput struct {
@@ -49,15 +49,15 @@ type ValidateFoodsInput struct {
 }
 
 type ValidationOutput struct {
-	ID primitive.ObjectID `json:"id"`
-	Name string `json:"name"`
-	Type string `json:"type"`
+	ID   primitive.ObjectID `json:"id"`
+	Name string             `json:"name"`
+	Type string             `json:"type"`
 }
 
 type ValidationResult struct {
-	Status string `json:"status"`
-	OriginalName string `json:"originalName"`
-	OkOutput *ValidationOutput `json:"okOutput,omitempty"`
+	Status            string             `json:"status"`
+	OriginalName      string             `json:"originalName"`
+	OkOutput          *ValidationOutput  `json:"okOutput,omitempty"`
 	SuggestionOutputs []ValidationOutput `json:"suggestionOutputs,omitempty"`
-	NewOutput *ValidationOutput `json:"newOutput,omitempty"`
+	NewOutput         *ValidationOutput  `json:"newOutput,omitempty"`
 }

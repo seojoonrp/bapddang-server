@@ -12,6 +12,7 @@ import (
 )
 
 type UserRepository interface {
+	FindByUsername(username string) (*models.User, error)
 	FindByEmail(email string) (*models.User, error)
 	Save(user *models.User) error
 	AddLikedFood(userID, foodID primitive.ObjectID) (bool, error)
@@ -25,6 +26,15 @@ type userRepository struct {
 
 func NewUserRepository(coll *mongo.Collection) UserRepository {
 	return &userRepository{collection: coll}
+}
+
+func (r *userRepository) FindByUsername(username string) (*models.User, error) {
+	var user models.User
+	err := r.collection.FindOne(context.TODO(), bson.M{"username": username}).Decode(&user)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
 
 func (r *userRepository) FindByEmail(email string) (*models.User, error) {

@@ -33,10 +33,10 @@ type FoodService interface {
 }
 
 type foodService struct {
-	foodRepo repositories.FoodRepository
+	foodRepo          repositories.FoodRepository
 	standardFoodCache []*models.StandardFood
-	customFoodCache []*models.CustomFood
-	cacheLock sync.RWMutex
+	customFoodCache   []*models.CustomFood
+	cacheLock         sync.RWMutex
 }
 
 func NewFoodService(foodRepo repositories.FoodRepository) FoodService {
@@ -53,10 +53,10 @@ func NewFoodService(foodRepo repositories.FoodRepository) FoodService {
 	log.Printf("Successfully loaded %d custom foods into cache", len(allCustomFoods))
 
 	return &foodService{
-		foodRepo: foodRepo,
+		foodRepo:          foodRepo,
 		standardFoodCache: allStandardFoods,
-		customFoodCache: allCustomFoods,
-		cacheLock: sync.RWMutex{},
+		customFoodCache:   allCustomFoods,
+		cacheLock:         sync.RWMutex{},
 	}
 }
 
@@ -78,28 +78,28 @@ func (s *foodService) GetStandardFoodByID(id string) (*models.StandardFood, erro
 }
 
 func (s *foodService) GetStandardFoodsByIDs(ids []primitive.ObjectID) ([]*models.StandardFood, error) {
-    s.cacheLock.RLock()
-    defer s.cacheLock.RUnlock()
+	s.cacheLock.RLock()
+	defer s.cacheLock.RUnlock()
 
-    results := make([]*models.StandardFood, 0, len(ids))
+	results := make([]*models.StandardFood, 0, len(ids))
 
-    foodMap := make(map[primitive.ObjectID]*models.StandardFood)
-    for _, food := range s.standardFoodCache {
-        foodMap[food.ID] = food
-    }
+	foodMap := make(map[primitive.ObjectID]*models.StandardFood)
+	for _, food := range s.standardFoodCache {
+		foodMap[food.ID] = food
+	}
 
-    for _, id := range ids {
-        if food, exists := foodMap[id]; exists {
-            if food.ReviewCount > 0 {
-                food.AverageRating = float64(food.TotalRating) / float64(food.ReviewCount)
-            } else {
-                food.AverageRating = 0.0
-            }
-            results = append(results, food)
-        }
-    }
+	for _, id := range ids {
+		if food, exists := foodMap[id]; exists {
+			if food.ReviewCount > 0 {
+				food.AverageRating = float64(food.TotalRating) / float64(food.ReviewCount)
+			} else {
+				food.AverageRating = 0.0
+			}
+			results = append(results, food)
+		}
+	}
 
-    return results, nil
+	return results, nil
 }
 
 func (s *foodService) CreateStandardFood(input models.NewStandardFoodInput) (*models.StandardFood, error) {
@@ -107,19 +107,19 @@ func (s *foodService) CreateStandardFood(input models.NewStandardFoodInput) (*mo
 	if err == nil {
 		return nil, errors.New("food already exists")
 	}
-	
+
 	newFood := &models.StandardFood{
-		ID: primitive.NewObjectID(),
-		Name: input.Name,
-		ImageURL: input.ImageURL,
-		Speed: input.Speed,
-		Type: input.Type,
-		Categories: input.Categories,
-		LikeCount: 0,
-		ReviewCount: 0,
-		TotalRating: 0,
+		ID:            primitive.NewObjectID(),
+		Name:          input.Name,
+		ImageURL:      input.ImageURL,
+		Speed:         input.Speed,
+		Type:          input.Type,
+		Categories:    input.Categories,
+		LikeCount:     0,
+		ReviewCount:   0,
+		TotalRating:   0,
 		AverageRating: 0.0,
-		TrendScore: 0,
+		TrendScore:    0,
 	}
 	err = s.foodRepo.SaveStandardFood(newFood)
 	if err != nil {
@@ -129,19 +129,19 @@ func (s *foodService) CreateStandardFood(input models.NewStandardFoodInput) (*mo
 	s.cacheLock.Lock()
 	s.standardFoodCache = append(s.standardFoodCache, newFood)
 	s.cacheLock.Unlock()
-	
+
 	return newFood, nil
 }
 
 func (s *foodService) FindOrCreateCustomFood(input models.NewCustomFoodInput, user models.User) (*models.CustomFood, error) {
 	existingFood, err := s.foodRepo.FindCustomFoodByName(input.Name)
-	
+
 	if err == mongo.ErrNoDocuments {
 		newFood := &models.CustomFood{
-			ID: primitive.NewObjectID(),
-			Name: input.Name,
+			ID:           primitive.NewObjectID(),
+			Name:         input.Name,
 			UsingUserIDs: []primitive.ObjectID{user.ID},
-			CreatedAt: time.Now(),
+			CreatedAt:    time.Now(),
 		}
 		err := s.foodRepo.SaveCustomFood(newFood)
 		if err != nil {
@@ -175,14 +175,14 @@ func (s *foodService) FindOrCreateCustomFood(input models.NewCustomFoodInput, us
 	if !alreadyExists {
 		existingFood.UsingUserIDs = append(existingFood.UsingUserIDs, user.ID)
 	}
-	
+
 	return existingFood, nil
 }
 
 func (s *foodService) GetMainFeedFoods(foodType, speed string, foodCount int) ([]*models.StandardFood, error) {
 	s.cacheLock.RLock()
 	defer s.cacheLock.RUnlock()
-	
+
 	candidates := make([]*models.StandardFood, 0)
 	for _, food := range s.standardFoodCache {
 		if food.Type == foodType && food.Speed == speed {
@@ -236,7 +236,7 @@ func (s *foodService) GetMainFeedFoods(foodType, speed string, foodCount int) ([
 }
 
 type matchCandidates struct {
-	Score float64
+	Score  float64
 	Output models.ValidationOutput
 }
 
@@ -253,7 +253,7 @@ func (s *foodService) ValidateFoods(names []string, userID primitive.ObjectID) (
 		if err == nil {
 			result.Status = "ok"
 			result.OkOutput = &models.ValidationOutput{
-				ID: standardFood.ID,
+				ID:   standardFood.ID,
 				Name: standardFood.Name,
 				Type: "standard",
 			}
@@ -265,7 +265,7 @@ func (s *foodService) ValidateFoods(names []string, userID primitive.ObjectID) (
 		if err == nil {
 			result.Status = "ok"
 			result.OkOutput = &models.ValidationOutput{
-				ID: customFood.ID,
+				ID:   customFood.ID,
 				Name: customFood.Name,
 				Type: "custom",
 			}
@@ -283,7 +283,7 @@ func (s *foodService) ValidateFoods(names []string, userID primitive.ObjectID) (
 				candidates = append(candidates, matchCandidates{
 					Score: score,
 					Output: models.ValidationOutput{
-						ID: food.ID,
+						ID:   food.ID,
 						Name: food.Name,
 						Type: "standard",
 					},
@@ -297,7 +297,7 @@ func (s *foodService) ValidateFoods(names []string, userID primitive.ObjectID) (
 				candidates = append(candidates, matchCandidates{
 					Score: score,
 					Output: models.ValidationOutput{
-						ID: food.ID,
+						ID:   food.ID,
 						Name: food.Name,
 						Type: "custom",
 					},
@@ -311,13 +311,13 @@ func (s *foodService) ValidateFoods(names []string, userID primitive.ObjectID) (
 			s.cacheLock.Lock()
 
 			// TODO : Lock 걸면서 중복 생성됐는지 이중체크
-			
+
 			newID := primitive.NewObjectID()
 			newCustomFood := &models.CustomFood{
-				ID: newID,
-				Name: name,
+				ID:           newID,
+				Name:         name,
 				UsingUserIDs: []primitive.ObjectID{userID},
-				CreatedAt: time.Now(),
+				CreatedAt:    time.Now(),
 			}
 
 			err := s.foodRepo.SaveCustomFood(newCustomFood)
@@ -330,7 +330,7 @@ func (s *foodService) ValidateFoods(names []string, userID primitive.ObjectID) (
 
 			result.Status = "new"
 			result.NewOutput = &models.ValidationOutput{
-				ID: newID,
+				ID:   newID,
 				Name: name,
 				Type: "new",
 			}
@@ -365,13 +365,13 @@ func (s *foodService) UpdateCreatedReviewStats(foodIDs []primitive.ObjectID, rat
 	s.cacheLock.Lock()
 	defer s.cacheLock.Unlock()
 
-	for _, foodID := range(foodIDs) {
+	for _, foodID := range foodIDs {
 		err := s.SyncRatingStatsCache(foodID, 0, rating)
 		if err != nil {
 			return err
 		}
 	}
-	
+
 	return nil
 }
 
@@ -384,7 +384,7 @@ func (s *foodService) UpdateModifiedReviewStats(foodIDs []primitive.ObjectID, ol
 	s.cacheLock.Lock()
 	defer s.cacheLock.Unlock()
 
-	for _, foodID := range(foodIDs) {
+	for _, foodID := range foodIDs {
 		err := s.SyncRatingStatsCache(foodID, oldRating, newRating)
 		if err != nil {
 			return err
@@ -425,7 +425,7 @@ func (s *foodService) SyncRatingStatsCache(foodID primitive.ObjectID, oldRating,
 	for _, food := range s.standardFoodCache {
 		if food.ID == foodID {
 			food.TotalRating = food.TotalRating - oldRating + newRating
-			if (food.ReviewCount > 0) {
+			if food.ReviewCount > 0 {
 				food.AverageRating = float64(food.TotalRating) / float64(food.ReviewCount)
 			}
 			break

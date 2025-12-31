@@ -5,9 +5,9 @@ package routes
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/seojoonrp/bapddang-server/api/handlers"
+	"github.com/seojoonrp/bapddang-server/api/middleware"
 	"github.com/seojoonrp/bapddang-server/api/repositories"
 	"github.com/seojoonrp/bapddang-server/api/services"
-	"github.com/seojoonrp/bapddang-server/middleware"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -45,14 +45,14 @@ func SetupRoutes(router *gin.Engine, db *mongo.Database) {
 		protected.Use(middleware.AuthMiddleware(userCollection))
 		{
 			protected.GET("/auth/me", userHandler.GetMe)
-			
+
 			protected.GET("/liked-foods", userHandler.GetLikedFoods)
 
 			protected.POST("/foods/:foodID/like", userHandler.LikeFood)
 			protected.DELETE("/foods/:foodID/like", userHandler.UnlikeFood)
 			protected.POST("/custom-foods", foodHandler.FindOrCreateCustomFood)
 			protected.POST("/foods/validate", foodHandler.ValidateFoods)
-			
+
 			protected.POST("/reviews", reviewHandler.CreateReview)
 			protected.GET("/reviews/me", reviewHandler.GetMyReviewsByDay)
 		}

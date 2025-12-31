@@ -26,21 +26,21 @@ func NewReviewRepository(coll *mongo.Collection) ReviewRepository {
 	return &reviewRepository{collection: coll}
 }
 
-func (r *reviewRepository) SaveReview (review *models.Review) error {
+func (r *reviewRepository) SaveReview(review *models.Review) error {
 	_, err := r.collection.InsertOne(context.TODO(), review)
 	return err
 }
 
-func (r *reviewRepository) UpdateReview (review *models.Review) error {
+func (r *reviewRepository) UpdateReview(review *models.Review) error {
 	filter := bson.M{"_id": review.ID}
 	update := bson.M{
 		"$set": bson.M{
-			"mealTime": review.MealTime,
-			"tags": review.Tags,
-			"imageURL": review.ImageURL,
-			"comment": review.Comment,
-			"rating": review.Rating,
-			"updatedAt": review.UpdatedAt,
+			"meal_time":  review.MealTime,
+			"tags":       review.Tags,
+			"image_url":  review.ImageURL,
+			"comment":    review.Comment,
+			"rating":     review.Rating,
+			"updated_at": review.UpdatedAt,
 		},
 	}
 
@@ -51,7 +51,7 @@ func (r *reviewRepository) UpdateReview (review *models.Review) error {
 func (r *reviewRepository) FindByUserIDAndDay(userID primitive.ObjectID, day int) ([]models.Review, error) {
 	var reviews []models.Review
 
-	filter := bson.M{"userId": userID, "day": day}
+	filter := bson.M{"user_id": userID, "day": day}
 	cursor, err := r.collection.Find(context.TODO(), filter)
 	if err != nil {
 		return nil, err
@@ -68,11 +68,11 @@ func (r *reviewRepository) FindByUserIDAndDay(userID primitive.ObjectID, day int
 func (r *reviewRepository) FindByIDAndUserID(reviewID, userID primitive.ObjectID) (*models.Review, error) {
 	var review models.Review
 
-	filter := bson.M{"_id": reviewID, "userId": userID}
+	filter := bson.M{"_id": reviewID, "user_id": userID}
 	err := r.collection.FindOne(context.TODO(), filter).Decode(&review)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &review, nil
 }

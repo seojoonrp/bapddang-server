@@ -130,7 +130,7 @@ func JaroWinkler(s1, s2 string) float64 {
 
 	p := 0.1
 	maxPrefix := 4.0
-	
+
 	r1, r2 := []rune(s1), []rune(s2)
 	l := 0.0
 	stop := math.Min(maxPrefix, math.Min(float64(len(r1)), float64(len(r2))))

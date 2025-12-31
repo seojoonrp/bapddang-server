@@ -16,17 +16,17 @@ import (
 
 type ReviewHandler struct {
 	reviewService services.ReviewService
-	foodService services.FoodService
+	foodService   services.FoodService
 }
 
 func NewReviewHandler(reviewService services.ReviewService, foodService services.FoodService) *ReviewHandler {
 	return &ReviewHandler{
 		reviewService: reviewService,
-		foodService: foodService,
+		foodService:   foodService,
 	}
 }
 
-func (h *ReviewHandler) CreateReview (ctx *gin.Context) {
+func (h *ReviewHandler) CreateReview(ctx *gin.Context) {
 	var input models.ReviewInput
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid review request format"})
@@ -59,7 +59,7 @@ func (h *ReviewHandler) CreateReview (ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, newReview)
 }
 
-func (h *ReviewHandler) UpdateReview (ctx *gin.Context) {
+func (h *ReviewHandler) UpdateReview(ctx *gin.Context) {
 	var input models.ReviewInput
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid review request format"})
@@ -82,9 +82,9 @@ func (h *ReviewHandler) UpdateReview (ctx *gin.Context) {
 
 	updatedReview, oldRating, err := h.reviewService.UpdateReview(reviewID, input, user)
 	if err != nil {
-    ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update review"})
-    return
-  }
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update review"})
+		return
+	}
 
 	standardFoods := make([]primitive.ObjectID, 0)
 	for _, foodItem := range updatedReview.Foods {

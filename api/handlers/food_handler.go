@@ -52,7 +52,7 @@ func (h *FoodHandler) CreateStandardFood(ctx *gin.Context) {
 			ctx.JSON(http.StatusConflict, gin.H{"error": "Food already exists"})
 			return
 		}
-		
+
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create food"})
 		return
 	}
