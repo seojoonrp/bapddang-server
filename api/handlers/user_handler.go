@@ -23,6 +23,22 @@ func NewUserHandler(userService services.UserService, foodService services.FoodS
 	}
 }
 
+func (h *UserHandler) CheckUsernameExists(ctx *gin.Context) {
+	username := ctx.Query("username")
+	if username == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Username query parameter is required"})
+		return
+	}
+
+	exists, err := h.userService.CheckUsernameExists(username)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"exists": exists})
+}
+
 func (h *UserHandler) SignUp(ctx *gin.Context) {
 	var input models.SignUpInput
 	if err := ctx.ShouldBindJSON(&input); err != nil {
@@ -118,11 +134,7 @@ func (h *UserHandler) AppleLogin(c *gin.Context) {
 		return
 	}
 
-	isNew, token, err := h.userService.LoginWithApple(
-		input.IdentityToken,
-		input.FullName.GivenName,
-		input.FullName.FamilyName,
-	)
+	isNew, token, err := h.userService.LoginWithApple(input.IdentityToken)
 
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Apple login failed"})

@@ -32,6 +32,9 @@ func (r *userRepository) FindByUsername(username string) (*models.User, error) {
 	var user models.User
 	err := r.collection.FindOne(context.TODO(), bson.M{"username": username}).Decode(&user)
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &user, nil

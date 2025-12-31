@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -37,11 +38,12 @@ type AppleKeys struct {
 }
 
 type UserService interface {
+	CheckUsernameExists(username string) (bool, error)
 	SignUp(input models.SignUpInput) (*models.User, error)
 	Login(input models.LoginInput) (string, error)
 	LoginWithGoogle(idToken string) (bool, string, error)
 	LoginWithKakao(accessToken string) (bool, string, error)
-	LoginWithApple(identityToken string, firstName string, lastName string) (bool, string, error)
+	LoginWithApple(identityToken string) (bool, string, error)
 
 	LikeFood(userID, foodID primitive.ObjectID) (bool, error)
 	UnlikeFood(userID, foodID primitive.ObjectID) (bool, error)
@@ -57,9 +59,28 @@ func NewUserService(userRepo repositories.UserRepository, foodRepo repositories.
 	return &userService{userRepo: userRepo, foodRepo: foodRepo}
 }
 
+func (s *userService) CheckUsernameExists(username string) (bool, error) {
+	user, err := s.userRepo.FindByUsername(username)
+	if err != nil {
+		return false, err
+	}
+	if user != nil {
+		return true, nil
+	}
+	return false, nil
+}
+
 func (s *userService) SignUp(input models.SignUpInput) (*models.User, error) {
-	_, err := s.userRepo.FindByUsername(input.Username)
-	if err == nil {
+	runes := []rune(input.Username)
+	if len(runes) < 3 || len(runes) > 15 {
+		return nil, errors.New("username must be between 3 and 15 characters")
+	}
+
+	exists, err := s.CheckUsernameExists(input.Username)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
 		return nil, errors.New("user already exists")
 	}
 
@@ -100,30 +121,28 @@ func (s *userService) Login(input models.LoginInput) (string, error) {
 	return utils.GenerateToken(user.ID.Hex())
 }
 
-func (s *userService) LoginWithGoogle(idToken string) (bool, string, error) {
-	webClientID := config.AppConfig.GoogleWebClientID
-
-	payload, err := idtoken.Validate(context.Background(), idToken, webClientID)
-	if err != nil {
-		return false, "", errors.New("invalid Google ID token")
-	}
-
-	email := payload.Claims["email"].(string)
-	userName := payload.Claims["name"].(string)
+func (s *userService) loginWithSocial(provider string, socialID string, email string) (bool, string, error) {
+	targetUsername := utils.GenerateHashUsername(provider, socialID)
 	isNew := false
 
-	user, err := s.userRepo.FindByEmail(email)
+	user, err := s.userRepo.FindByUsername(targetUsername)
 	if err != nil {
+		return false, "", err
+	}
+
+	if user == nil {
 		isNew = true
 		user = &models.User{
 			ID:           primitive.NewObjectID(),
-			Username:     userName,
-			Email:        email,
-			Password:     "",
-			LoginMethod:  models.LoginMethodGoogle,
+			Username:     targetUsername,
+			SocialID:     socialID,
+			LoginMethod:  provider,
 			Day:          1,
 			LikedFoodIDs: make([]primitive.ObjectID, 0),
 			CreatedAt:    time.Now(),
+		}
+		if email != "" {
+			user.Email = email
 		}
 
 		if err := s.userRepo.Save(user); err != nil {
@@ -133,6 +152,20 @@ func (s *userService) LoginWithGoogle(idToken string) (bool, string, error) {
 
 	signedToken, err := utils.GenerateToken(user.ID.Hex())
 	return isNew, signedToken, err
+}
+
+func (s *userService) LoginWithGoogle(idToken string) (bool, string, error) {
+	webClientID := config.AppConfig.GoogleWebClientID
+
+	payload, err := idtoken.Validate(context.Background(), idToken, webClientID)
+	if err != nil {
+		return false, "", errors.New("invalid Google ID token")
+	}
+
+	socialID := payload.Subject
+	email, _ := payload.Claims["email"].(string)
+
+	return s.loginWithSocial(models.LoginMethodGoogle, socialID, email)
 }
 
 func (s *userService) LoginWithKakao(accessToken string) (bool, string, error) {
@@ -159,36 +192,13 @@ func (s *userService) LoginWithKakao(accessToken string) (bool, string, error) {
 		return false, "", errors.New("failed to decode Kakao response")
 	}
 
+	socialID := strconv.FormatInt(kakaoRes.ID, 10)
 	email := kakaoRes.KakaoAccount.Email
-	isNew := false
 
-	user, err := s.userRepo.FindByEmail(email)
-
-	if err != nil {
-		isNew = true
-		user = &models.User{
-			ID:           primitive.NewObjectID(),
-			Username:     kakaoRes.KakaoAccount.Profile.Nickname,
-			Email:        email,
-			Password:     "",
-			LoginMethod:  models.LoginMethodKakao,
-			Day:          1,
-			LikedFoodIDs: make([]primitive.ObjectID, 0),
-			CreatedAt:    time.Now(),
-		}
-
-		if err := s.userRepo.Save(user); err != nil {
-			return false, "", err
-		}
-	}
-
-	signedToken, err := utils.GenerateToken(user.ID.Hex())
-	return isNew, signedToken, err
+	return s.loginWithSocial(models.LoginMethodKakao, socialID, email)
 }
 
 func (s *userService) verifyAppleToken(identityToken string, clientID string) (jwt.MapClaims, error) {
-	fmt.Println("Starting apple token verification. ClientID:", clientID)
-
 	resp, err := http.Get("https://appleid.apple.com/auth/keys")
 	if err != nil {
 		return nil, err
@@ -219,7 +229,6 @@ func (s *userService) verifyAppleToken(identityToken string, clientID string) (j
 	})
 
 	if err != nil || !token.Valid {
-		fmt.Println("Token parsing error:", err)
 		return nil, errors.New("invalid Apple identity token")
 	}
 
@@ -231,11 +240,11 @@ func (s *userService) verifyAppleToken(identityToken string, clientID string) (j
 		return nil, errors.New("invalid audience")
 	}
 
-	fmt.Println("Successfully parsed token.")
+	fmt.Println("Successfully parsed apple token.")
 	return claims, nil
 }
 
-func (s *userService) LoginWithApple(identityToken string, firstName string, lastName string) (bool, string, error) {
+func (s *userService) LoginWithApple(identityToken string) (bool, string, error) {
 	clientID := config.AppConfig.AppleBundleID
 	claims, err := s.verifyAppleToken(identityToken, clientID)
 	if err != nil {
@@ -243,40 +252,10 @@ func (s *userService) LoginWithApple(identityToken string, firstName string, las
 		return false, "", err
 	}
 
-	email, ok := claims["email"].(string)
-	if !ok {
-		email = claims["sub"].(string) + "@apple-user.com"
-	}
-	fmt.Println("Apple login for email:", email)
+	socialID, _ := claims["sub"].(string)
+	email, _ := claims["email"].(string)
 
-	userName := firstName + " " + lastName
-	if userName == " " {
-		userName = "Apple User"
-	}
-
-	isNew := false
-	user, err := s.userRepo.FindByEmail(email)
-
-	if err != nil {
-		isNew = true
-		user = &models.User{
-			ID:           primitive.NewObjectID(),
-			Username:     userName,
-			Email:        email,
-			Password:     "",
-			LoginMethod:  models.LoginMethodApple,
-			Day:          1,
-			LikedFoodIDs: make([]primitive.ObjectID, 0),
-			CreatedAt:    time.Now(),
-		}
-
-		if err := s.userRepo.Save(user); err != nil {
-			return false, "", err
-		}
-	}
-
-	signedToken, err := utils.GenerateToken(user.ID.Hex())
-	return isNew, signedToken, err
+	return s.loginWithSocial(models.LoginMethodApple, socialID, email)
 }
 
 func (s *userService) LikeFood(userID, foodID primitive.ObjectID) (bool, error) {

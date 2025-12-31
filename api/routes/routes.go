@@ -3,6 +3,8 @@
 package routes
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/seojoonrp/bapddang-server/api/handlers"
 	"github.com/seojoonrp/bapddang-server/api/middleware"
@@ -32,8 +34,15 @@ func SetupRoutes(router *gin.Engine, db *mongo.Database) {
 
 	apiV1 := router.Group("/api/v1")
 	{
+		apiV1.GET("/ping", func(c *gin.Context) {
+			c.JSON(http.StatusOK, gin.H{
+				"message": "Bobttaeng server is running!",
+			})
+		})
+
 		authRoutes := apiV1.Group("/auth")
 		{
+			authRoutes.GET("/check-username", userHandler.CheckUsernameExists)
 			authRoutes.POST("/signup", userHandler.SignUp)
 			authRoutes.POST("/login", userHandler.Login)
 			authRoutes.POST("/google", userHandler.GoogleLogin)

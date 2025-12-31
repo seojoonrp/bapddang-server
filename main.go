@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/seojoonrp/bapddang-server/api/routes"
 	"github.com/seojoonrp/bapddang-server/config"
@@ -20,8 +21,11 @@ func main() {
 	defer client.Disconnect(context.TODO())
 
 	db := client.Database(config.AppConfig.DBName)
+
 	router := gin.Default()
 	router.SetTrustedProxies(nil)
+	router.Use(cors.Default())
+
 	routes.SetupRoutes(router, db)
 
 	port := config.AppConfig.Port
